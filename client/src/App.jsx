@@ -1,9 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import RegisterPage from './pages/RegisterPage'; // importing register page
-import HomePage from './pages/HomePage';
+import RegisterPage from './pages/RegisterPage';
 
-// a simple base for the homepage for now
+// Simple component for the homepage
 function HomePageComponent() {
   return (
     <div>
@@ -26,14 +25,12 @@ function App() {
             <li>
               <Link to="/register">Register</Link>
             </li>
-            {/* Add a Login link here later */}
           </ul>
         </nav>
 
         <hr />
 
         {/* --- Route Configuration --- */}
-        {/* This section tells React which component to show for each URL */}
         <Routes>
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/" element={<HomePageComponent />} />
