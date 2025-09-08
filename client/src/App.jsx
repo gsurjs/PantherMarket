@@ -1,14 +1,45 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import RegisterPage from './pages/RegisterPage';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext'; // Import the useAuth hook
+import { auth } from './firebase';
 
-// Simple component for the homepage
+import RegisterPage from './pages/RegisterPage';
+import LoginPage from './pages/LoginPage'; // Import the LoginPage
+
 function HomePageComponent() {
+  return <h1>Welcome to PantherMarket!</h1>;
+}
+
+function Navbar() {
+  const { currentUser } = useAuth(); // Get the current user from context
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await auth.signOut();
+      navigate('/login'); // Redirect to login page after logout
+    } catch (error) {
+      console.error('Failed to log out', error);
+    }
+  };
+
   return (
-    <div>
-      <h1>Welcome to PantherMarket!</h1>
-      <p>This is the homepage where listings will be displayed.</p>
-    </div>
+    <nav>
+      <ul>
+        <li><Link to="/">Home</Link></li>
+        {currentUser ? (
+          <>
+            <li><Link to="/profile">Profile</Link></li>
+            <li><button onClick={handleLogout}>Logout</button></li>
+          </>
+        ) : (
+          <>
+            <li><Link to="/register">Register</Link></li>
+            <li><Link to="/login">Login</Link></li>
+          </>
+        )}
+      </ul>
+    </nav>
   );
 }
 
@@ -16,24 +47,13 @@ function App() {
   return (
     <Router>
       <div>
-        {/* --- Navigation Bar --- */}
-        <nav>
-          <ul>
-            <li>
-              <Link to="/">Home</Link>
-            </li>
-            <li>
-              <Link to="/register">Register</Link>
-            </li>
-          </ul>
-        </nav>
-
+        <Navbar /> {/* Use the new Navbar component */}
         <hr />
-
-        {/* --- Route Configuration --- */}
         <Routes>
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<HomePageComponent />} />
+          {/* Add a /profile route here later */}
         </Routes>
       </div>
     </Router>
