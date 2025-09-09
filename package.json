@@ -1,5 +1,5 @@
 {
-  "name": "panthermarket-root",
+  "name": "panthermarket-monorepo-root",
   "private": true,
   "dependencies": {
     "cors": "^2.8.5",
