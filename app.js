@@ -23,29 +23,40 @@ const registerHTML = `
     <p id="auth-error" class="error"></p>
 `;
 
+const registrationSuccessHTML = `
+    <h2>Registration Successful!</h2>
+    <p>A verification link has been sent to your GSU email address. Please check your inbox and click the link to activate your account.</p>
+`;
+
+//unverified user template that shows if user isn't verified
+const verifyEmailHTML = (email) => `
+    <h2>Verify Your Email</h2>
+    <p>A verification link was sent to <strong>${email}</strong>.</p>
+    <p>Please check your inbox and click the link to continue. You will be logged in automatically after verification.</p>
+    <button id="resend-verification-button">Resend Verification Email</button>
+`;
+
 const welcomeHTML = (user) => `
     <h2>Welcome!</h2>
     <p>You are logged in as ${user.email}.</p>
 `;
 
-// --- MAIN APP LOGIC ---
 
-// This function will fetch the config and then start the rest of the app
+// --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
     try {
-        // 1. Fetch the Firebase config from our secure API endpoint
         const response = await fetch('/api/config');
         if (!response.ok) {
             throw new Error('Could not fetch app configuration.');
         }
         const firebaseConfig = await response.json();
 
-        // 2. Initialize Firebase with the fetched config
+        // Initialize Firebase with the fetched config
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // 3. Now that Firebase is initialized, set up the auth listener
+        // Now that Firebase is initialized, set up the auth listener
         setupAuthListener(auth, db);
 
     } catch (error) {
@@ -54,14 +65,30 @@ async function initializeApp() {
     }
 }
 
-// This function sets up the main listener and is only called once Firebase is ready
+// --- AUTHENTICATION STATE LISTENER ---
 function setupAuthListener(auth, db) {
     auth.onAuthStateChanged(user => {
         if (user) {
-            // User is signed in
-            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            appContent.innerHTML = welcomeHTML(user);
-            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+            // User is signed in, check if their email is verified
+            if (user.emailVerified) {
+                // User is verified, show the welcome screen
+                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+                appContent.innerHTML = welcomeHTML(user);
+                document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+            } else {
+                // User is NOT verified, show the verification prompt
+                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+                appContent.innerHTML = verifyEmailHTML(user.email);
+                document.getElementById('resend-verification-button').addEventListener('click', () => {
+                    user.sendEmailVerification()
+                        .then(() => {
+                            alert('A new verification email has been sent.');
+                        })
+                        .catch(error => {
+                             document.getElementById('auth-error').textContent = error.message;
+                        });
+                });
+            }
         } else {
             // User is signed out
             navLinks.innerHTML = `
@@ -85,11 +112,28 @@ function setupAuthListener(auth, db) {
     });
 }
 
-// This function adds listeners to the forms
+// --- FUNCTION TO ADD EVENT LISTENERS TO AUTH FORMS ---
 function addAuthFormListeners(auth, db) {
-    const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
     const authErrorElement = document.getElementById('auth-error');
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Reload user state to get latest verification status
+                    return userCredential.user.reload();
+                })
+                .catch(error => {
+                    authErrorElement.textContent = error.message;
+                });
+        });
+    }
 
     if (registerForm) {
         registerForm.addEventListener('submit', e => {
@@ -105,23 +149,19 @@ function addAuthFormListeners(auth, db) {
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
+                    // Send verification email
+                    userCredential.user.sendEmailVerification();
+                    // Create user profile in Firestore
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: userCredential.user.email,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        emailVerified: false
                     });
                 })
-                .catch(error => {
-                    authErrorElement.textContent = error.message;
-                });
-        });
-    }
-
-    if (loginForm) {
-        loginForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    // Show success message
+                    appContent.innerHTML = registrationSuccessHTML;
+                })
                 .catch(error => {
                     authErrorElement.textContent = error.message;
                 });
