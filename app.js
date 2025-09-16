@@ -93,7 +93,7 @@ async function initializeApp() {
 }
 
 // --- AUTHENTICATION STATE LISTENER ---
-function setupAuthListener(auth, db) {
+function setupAuthListener(auth, db, storage) {
     auth.onAuthStateChanged(user => {
         if (user) {
             // User is signed in, check if their email is verified
@@ -102,6 +102,10 @@ function setupAuthListener(auth, db) {
                 navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
                 appContent.innerHTML = welcomeHTML(user);
                 document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+                document.getElementById('create-listing-btn').addEventListener('click', () => {
+	                appContent.innerHTML = createListingHTML;
+	                addListingFormListener(auth, db, storage);
+            	});
             } else {
                 // User is NOT verified, show the verification prompt
                 navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
