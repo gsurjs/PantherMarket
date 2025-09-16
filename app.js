@@ -27,6 +27,7 @@ const registerHTML = `
 const registrationSuccessHTML = `
     <h2>Registration Successful!</h2>
     <p>A verification link has been sent to your GSU email address. Please check your inbox and click the link to activate your account.</p>
+    <p>If you've clicked the link in your email and haven't been redirected, try refreshing this page.</p>
 `;
 
 //unverified user template that shows if user isn't verified
