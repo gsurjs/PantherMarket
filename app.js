@@ -68,6 +68,7 @@ const listingCardHTML = (listing) => `
     </div>
 `;
 
+
 // --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
     try {
@@ -76,13 +77,14 @@ async function initializeApp() {
             throw new Error('Could not fetch app configuration.');
         }
         const firebaseConfig = await response.json();
-	    firebase.initializeApp(firebaseConfig); // Assuming firebaseConfig is loaded
-	    auth = firebase.auth();
-	    db = firebase.firestore();
-	    storage = firebase.storage();
 
-	    setupAuthListener();
-	    loadAllListings();
+        // Initialize Firebase with the fetched config
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Now that Firebase is initialized, set up the auth listener
+        setupAuthListener(auth, db);
 
     } catch (error) {
         console.error('Failed to initialize Firebase:', error);
@@ -152,7 +154,6 @@ function loadAllListings(db) {
 function addListingFormListener(auth, db, storage) {
     const listingForm = document.getElementById('create-listing-form');
     const formError = document.getElementById('form-error');
-    const user = auth.currentUser;
 
     listingForm.addEventListener('submit', (e) => {
         e.preventDefault();
