@@ -1,3 +1,7 @@
+// --- GLOBAL VARIABLES ---
+let auth;
+let db;
+
 // GET HTML ELEMENTS
 const navLinks = document.getElementById('nav-links');
 const appContent = document.getElementById('app-content');
@@ -28,6 +32,27 @@ const welcomeHTML = (email) => `
     <p>You are logged in as ${email}.</p>
     <p>Please check your inbox to verify your email address.</p>
 `;
+
+// --- MAIN APP INITIALIZATION ---
+async function main() {
+  try {
+    // 1. Fetch the Firebase config from our secure API endpoint
+    const response = await fetch('/api/config');
+    const firebaseConfig = await response.json();
+
+    // 2. Initialize Firebase with the fetched config
+    firebase.initializeApp(firebaseConfig);
+    auth = firebase.auth();
+    db = firebase.firestore();
+
+    // 3. Set up the authentication listener
+    setupAuthListener();
+
+  } catch (error) {
+    console.error('Failed to initialize Firebase:', error);
+    appContent.innerHTML = `<p class="error">Error: Could not load application configuration. Please try again later.</p>`;
+  }
+}
 
 
 // --- AUTHENTICATION STATE LISTENER ---
@@ -113,3 +138,5 @@ function addAuthFormListeners() {
         });
     }
 }
+
+main();
