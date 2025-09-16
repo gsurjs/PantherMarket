@@ -26,6 +26,7 @@ const registerHTML = `
 const welcomeHTML = (email) => `
     <h2>Welcome!</h2>
     <p>You are logged in as ${email}.</p>
+    <p>Please check your inbox to verify your email address.</p>
 `;
 
 
@@ -88,7 +89,7 @@ function addAuthFormListeners() {
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
 
-            [cite_start]// GSU Email Validation
+            // GSU Email Validation
             const isGsuEmail = email.endsWith('@student.gsu.edu') || email.endsWith('@gsu.edu');
             if (!isGsuEmail) {
                 authErrorElement.textContent = 'Error: Please use a valid GSU email address.';
