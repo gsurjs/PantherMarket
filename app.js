@@ -82,9 +82,11 @@ async function initializeApp() {
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
 
         // Now that Firebase is initialized, set up the auth listener
-        setupAuthListener(auth, db);
+        setupAuthListener(auth, db, storage);
+        loadAllListings(db);
 
     } catch (error) {
         console.error('Failed to initialize Firebase:', error);
@@ -93,29 +95,25 @@ async function initializeApp() {
 }
 
 // --- AUTHENTICATION STATE LISTENER ---
-function setupAuthListener(auth, db) {
+function setupAuthListener(auth, db, storage) {
     auth.onAuthStateChanged(user => {
-        if (user) {
-            // User is signed in, check if their email is verified
-            if (user.emailVerified) {
-                // User is verified, show the welcome screen
-                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-                appContent.innerHTML = welcomeHTML(user);
-                document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-            } else {
-                // User is NOT verified, show the verification prompt
-                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-                appContent.innerHTML = verifyEmailHTML(user.email);
-                document.getElementById('resend-verification-button').addEventListener('click', () => {
-                    user.sendEmailVerification()
-                        .then(() => {
-                            alert('A new verification email has been sent.');
-                        })
-                        .catch(error => {
-                             document.getElementById('auth-error').textContent = error.message;
-                        });
-                });
-            }
+        if (user && user.emailVerified) {
+            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+            appContent.innerHTML = welcomeHTML(user);
+
+            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+            
+            document.getElementById('create-listing-btn').addEventListener('click', () => {
+                appContent.innerHTML = createListingHTML;
+                addListingFormListener(auth, db, storage);
+            });
+        } else if (user && !user.emailVerified) {
+            // Your logic for unverified users
+            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+            appContent.innerHTML = verifyEmailHTML(user.email);
+            document.getElementById('resend-verification-button').addEventListener('click', () => {
+                user.sendEmailVerification().then(() => alert('Verification email sent!'));
+            });
         } else {
             // User is signed out
             navLinks.innerHTML = `
@@ -141,7 +139,7 @@ function setupAuthListener(auth, db) {
 
 // --- FUNCTION TO LOAD ALL LISTINGS ---
 function loadAllListings(db) {
-    db.collection("listings").orderBy("createdAt", "desc").get().then((querySnapshot) => {
+    db.collection("listings").orderBy("createdAt", "desc").onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
         querySnapshot.forEach((doc) => {
             listingsGrid.innerHTML += listingCardHTML(doc.data());
@@ -154,6 +152,7 @@ function loadAllListings(db) {
 function addListingFormListener(auth, db, storage) {
     const listingForm = document.getElementById('create-listing-form');
     const formError = document.getElementById('form-error');
+    const user = auth.currentUser;
 
     listingForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -161,7 +160,6 @@ function addListingFormListener(auth, db, storage) {
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
         const imageFile = document.getElementById('listing-image').files[0];
-        const user = auth.currentUser;
 
         if (!imageFile) {
             formError.textContent = "Please select an image.";
@@ -194,7 +192,11 @@ function addListingFormListener(auth, db, storage) {
                     }).then(() => {
                         alert('Listing created successfully!');
                         appContent.innerHTML = welcomeHTML(user); // Go back to welcome screen
-                        loadAllListings(db); // Refresh listings on the page
+                        document.getElementById('create-listing-btn').addEventListener('click', () => {
+                            appContent.innerHTML = createListingHTML;
+                            addListingFormListener(auth, db, storage);
+                        	loadAllListings(db); // Refresh listings on the page
+                        });
                     }).catch(error => {
                         console.error("Error adding document: ", error);
                         formError.textContent = "Failed to save listing.";
@@ -202,6 +204,15 @@ function addListingFormListener(auth, db, storage) {
                 });
             }
         );
+    });
+    
+    document.getElementById('cancel-listing-btn').addEventListener('click', () => {
+        appContent.innerHTML = welcomeHTML(user);
+        // Re-attach the listener for the create button after returning to the welcome screen
+        document.getElementById('create-listing-btn').addEventListener('click', () => {
+            appContent.innerHTML = createListingHTML;
+            addListingFormListener(auth, db, storage);
+        });
     });
 }
 
