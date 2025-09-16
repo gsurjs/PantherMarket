@@ -198,7 +198,11 @@ function addListingFormListener(auth, db, storage) {
                     }).then(() => {
                         alert('Listing created successfully!');
                         appContent.innerHTML = welcomeHTML(user); // Go back to welcome screen
-                        loadAllListings(db); // Refresh listings on the page
+                        document.getElementById('create-listing-btn').addEventListener('click', () => {
+                            appContent.innerHTML = createListingHTML;
+                            addListingFormListener(auth, db, storage);
+                        	loadAllListings(db); // Refresh listings on the page
+                        });
                     }).catch(error => {
                         console.error("Error adding document: ", error);
                         formError.textContent = "Failed to save listing.";
@@ -206,6 +210,14 @@ function addListingFormListener(auth, db, storage) {
                 });
             }
         );
+    });
+    document.getElementById('cancel-listing-btn').addEventListener('click', () => {
+        appContent.innerHTML = welcomeHTML(user);
+        // Re-attach the listener for the create button after returning to the welcome screen
+        document.getElementById('create-listing-btn').addEventListener('click', () => {
+            appContent.innerHTML = createListingHTML;
+            addListingFormListener(auth, db, storage);
+        });
     });
 }
 
