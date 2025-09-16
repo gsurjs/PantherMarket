@@ -84,7 +84,8 @@ async function initializeApp() {
         const db = firebase.firestore();
 
         // Now that Firebase is initialized, set up the auth listener
-        setupAuthListener(auth, db);
+        setupAuthListener(auth, db, storage);
+        loadAllListings(db);
 
     } catch (error) {
         console.error('Failed to initialize Firebase:', error);
@@ -137,7 +138,7 @@ function setupAuthListener(auth, db, storage) {
 
 // --- FUNCTION TO LOAD ALL LISTINGS ---
 function loadAllListings(db) {
-    db.collection("listings").orderBy("createdAt", "desc").get().then((querySnapshot) => {
+    db.collection("listings").orderBy("createdAt", "desc").onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
         querySnapshot.forEach((doc) => {
             listingsGrid.innerHTML += listingCardHTML(doc.data());
