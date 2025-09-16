@@ -1,12 +1,8 @@
-// --- GLOBAL VARIABLES ---
-let auth;
-let db;
-
-// GET HTML ELEMENTS
+// --- GET HTML ELEMENTS ---
 const navLinks = document.getElementById('nav-links');
 const appContent = document.getElementById('app-content');
 
-// --- TEMPLATES for different views ---
+// --- HTML TEMPLATES ---
 const loginHTML = `
     <h2>Login</h2>
     <form id="login-form">
@@ -27,86 +23,73 @@ const registerHTML = `
     <p id="auth-error" class="error"></p>
 `;
 
-const welcomeHTML = (email) => `
+const welcomeHTML = (user) => `
     <h2>Welcome!</h2>
-    <p>You are logged in as ${email}.</p>
-    <p>Please check your inbox to verify your email address.</p>
+    <p>You are logged in as ${user.email}.</p>
 `;
 
-// --- MAIN APP INITIALIZATION ---
-async function main() {
-  try {
-    // 1. Fetch the Firebase config from our secure API endpoint
-    const response = await fetch('/api/config');
-    const firebaseConfig = await response.json();
+// --- MAIN APP LOGIC ---
 
-    // 2. Initialize Firebase with the fetched config
-    firebase.initializeApp(firebaseConfig);
-    auth = firebase.auth();
-    db = firebase.firestore();
+// This function will fetch the config and then start the rest of the app
+async function initializeApp() {
+    try {
+        // 1. Fetch the Firebase config from our secure API endpoint
+        const response = await fetch('/api/config');
+        if (!response.ok) {
+            throw new Error('Could not fetch app configuration.');
+        }
+        const firebaseConfig = await response.json();
 
-    // 3. Set up the authentication listener
-    setupAuthListener();
+        // 2. Initialize Firebase with the fetched config
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
-  } catch (error) {
-    console.error('Failed to initialize Firebase:', error);
-    appContent.innerHTML = `<p class="error">Error: Could not load application configuration. Please try again later.</p>`;
-  }
+        // 3. Now that Firebase is initialized, set up the auth listener
+        setupAuthListener(auth, db);
+
+    } catch (error) {
+        console.error('Failed to initialize Firebase:', error);
+        appContent.innerHTML = `<p class="error">Error: Could not load application. Please try again later.</p>`;
+    }
 }
 
-
-// --- AUTHENTICATION STATE LISTENER ---
-// This is the core of the app. It runs whenever the user's login status changes.
-auth.onAuthStateChanged(user => {
-    if (user) {
-        // User is signed in
-        navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-        appContent.innerHTML = welcomeHTML(user.email);
-
-        document.getElementById('logout-button').addEventListener('click', () => {
-            auth.signOut();
-        });
-
-    } else {
-        // User is signed out
-        navLinks.innerHTML = `
-            <a href="#" id="login-link">Login</a>
-            <a href="#" id="register-link">Register</a>
-        `;
-        appContent.innerHTML = loginHTML; // Default to login view
-        addAuthFormListeners(); // Re-add listeners for the new forms
-
-        document.getElementById('login-link').addEventListener('click', (e) => {
-            e.preventDefault();
+// This function sets up the main listener and is only called once Firebase is ready
+function setupAuthListener(auth, db) {
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // User is signed in
+            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+            appContent.innerHTML = welcomeHTML(user);
+            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+        } else {
+            // User is signed out
+            navLinks.innerHTML = `
+                <a href="#" id="login-link">Login</a>
+                <a href="#" id="register-link">Register</a>
+            `;
             appContent.innerHTML = loginHTML;
-            addAuthFormListeners();
-        });
-        document.getElementById('register-link').addEventListener('click', (e) => {
-            e.preventDefault();
-            appContent.innerHTML = registerHTML;
-            addAuthFormListeners();
-        });
-    }
-});
+            addAuthFormListeners(auth, db);
 
-// --- FUNCTION TO ADD EVENT LISTENERS TO AUTH FORMS ---
-function addAuthFormListeners() {
-    const loginForm = document.getElementById('login-form');
+            document.getElementById('login-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                appContent.innerHTML = loginHTML;
+                addAuthFormListeners(auth, db);
+            });
+            document.getElementById('register-link').addEventListener('click', (e) => {
+                e.preventDefault();
+                appContent.innerHTML = registerHTML;
+                addAuthFormListeners(auth, db);
+            });
+        }
+    });
+}
+
+// This function adds listeners to the forms
+function addAuthFormListeners(auth, db) {
     const registerForm = document.getElementById('register-form');
+    const loginForm = document.getElementById('login-form');
     const authErrorElement = document.getElementById('auth-error');
-
-    if (loginForm) {
-        loginForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-
-            auth.signInWithEmailAndPassword(email, password)
-                .catch(error => {
-                    authErrorElement.textContent = error.message;
-                });
-        });
-    }
 
     if (registerForm) {
         registerForm.addEventListener('submit', e => {
@@ -114,7 +97,6 @@ function addAuthFormListeners() {
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
 
-            // GSU Email Validation
             const isGsuEmail = email.endsWith('@student.gsu.edu') || email.endsWith('@gsu.edu');
             if (!isGsuEmail) {
                 authErrorElement.textContent = 'Error: Please use a valid GSU email address.';
@@ -123,15 +105,23 @@ function addAuthFormListeners() {
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
-                    // Create a user document in Firestore
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: userCredential.user.email,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 })
-                .then(() => {
-                    console.log('User registered and profile created!');
-                })
+                .catch(error => {
+                    authErrorElement.textContent = error.message;
+                });
+        });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            auth.signInWithEmailAndPassword(email, password)
                 .catch(error => {
                     authErrorElement.textContent = error.message;
                 });
@@ -139,4 +129,5 @@ function addAuthFormListeners() {
     }
 }
 
-main();
+// --- START THE APP ---
+initializeApp();
