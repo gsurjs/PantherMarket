@@ -1,6 +1,7 @@
 // --- GET HTML ELEMENTS ---
 const navLinks = document.getElementById('nav-links');
 const appContent = document.getElementById('app-content');
+const listingsGrid = document.getElementById('listings-grid');
 
 // --- HTML TEMPLATES ---
 const loginHTML = `
@@ -39,6 +40,30 @@ const verifyEmailHTML = (email) => `
 const welcomeHTML = (user) => `
     <h2>Welcome!</h2>
     <p>You are logged in as ${user.email}.</p>
+    <button id="create-listing-btn">Create a New Listing</button>
+`;
+
+const createListingHTML = `
+    <h2>Create New Listing</h2>
+    <form id="create-listing-form">
+        <input type="text" id="listing-title" placeholder="Item Title" required>
+        <textarea id="listing-desc" placeholder="Item Description" required></textarea>
+        <input type="number" id="listing-price" placeholder="Price ($)" step="0.01" required>
+        <label for="listing-image">Upload Image:</label>
+        <input type="file" id="listing-image" accept="image/*" required>
+        <button type="submit">Submit Listing</button>
+    </form>
+    <p id="form-error" class="error"></p>
+`;
+
+const listingCardHTML = (listing) => `
+    <div class="listing-card">
+        <img src="${listing.imageUrl}" alt="${listing.title}">
+        <div class="listing-card-info">
+            <h3>${listing.title}</h3>
+            <p>$${listing.price}</p>
+        </div>
+    </div>
 `;
 
 
@@ -109,6 +134,72 @@ function setupAuthListener(auth, db) {
                 addAuthFormListeners(auth, db);
             });
         }
+    });
+}
+
+// --- FUNCTION TO LOAD ALL LISTINGS ---
+function loadAllListings(db) {
+    db.collection("listings").orderBy("createdAt", "desc").get().then((querySnapshot) => {
+        listingsGrid.innerHTML = ''; // Clear existing listings
+        querySnapshot.forEach((doc) => {
+            listingsGrid.innerHTML += listingCardHTML(doc.data());
+        });
+    });
+}
+
+
+// --- FUNCTION TO ADD LISTING FORM LISTENER ---
+function addListingFormListener(auth, db, storage) {
+    const listingForm = document.getElementById('create-listing-form');
+    const formError = document.getElementById('form-error');
+
+    listingForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const title = document.getElementById('listing-title').value;
+        const description = document.getElementById('listing-desc').value;
+        const price = document.getElementById('listing-price').value;
+        const imageFile = document.getElementById('listing-image').files[0];
+        const user = auth.currentUser;
+
+        if (!imageFile) {
+            formError.textContent = "Please select an image.";
+            return;
+        }
+
+        // 1. Upload Image to Firebase Storage
+        const filePath = `listings/${user.uid}/${Date.now()}_${imageFile.name}`;
+        const fileRef = storage.ref(filePath);
+        const uploadTask = fileRef.put(imageFile);
+
+        uploadTask.on('state_changed',
+            (snapshot) => { /* Can be used for upload progress bar */ },
+            (error) => {
+                console.error("Upload failed:", error);
+                formError.textContent = "Image upload failed. Please try again.";
+            },
+            () => {
+                // 2. Get Image URL after upload
+                uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                    // 3. Save Listing to Firestore
+                    db.collection("listings").add({
+                        title: title,
+                        description: description,
+                        price: Number(price),
+                        imageUrl: downloadURL,
+                        sellerId: user.uid,
+                        sellerEmail: user.email,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }).then(() => {
+                        alert('Listing created successfully!');
+                        appContent.innerHTML = welcomeHTML(user); // Go back to welcome screen
+                        loadAllListings(db); // Refresh listings on the page
+                    }).catch(error => {
+                        console.error("Error adding document: ", error);
+                        formError.textContent = "Failed to save listing.";
+                    });
+                });
+            }
+        );
     });
 }
 

@@ -67,3 +67,43 @@ button:hover {
     cursor: pointer;
     font-size: 1rem;
 }
+
+/* listing styles */
+
+#listings-section {
+    max-width: 1200px;
+    margin: 2rem auto;
+}
+
+#listings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.listing-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    overflow: hidden;
+}
+
+.listing-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.listing-card-info {
+    padding: 1rem;
+}
+
+.listing-card-info h3 {
+    margin: 0 0 0.5rem 0;
+}
+
+.listing-card-info p {
+    margin: 0;
+    color: #555;
+}
