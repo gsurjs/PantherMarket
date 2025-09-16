@@ -68,8 +68,6 @@ const listingCardHTML = (listing) => `
     </div>
 `;
 
-let auth, db, storage; // firebase services globally accessible
-
 // --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
     try {
