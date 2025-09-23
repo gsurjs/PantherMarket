@@ -155,21 +155,34 @@ function setupAuthListener(auth, db, storage) {
         } else {
             // User is signed out
             navLinks.innerHTML = `
-                <a href="#" id="login-link">Login</a>
-                <a href="#" id="register-link">Register</a>
+                <a href="#" id="login-link" class="active-link">Login</a>
+                <a href="#" id="register-link" class="active-link">Register</a>
             `;
             appContent.innerHTML = loginHTML;
             addAuthFormListeners(auth, db);
 
-            document.getElementById('login-link').addEventListener('click', (e) => {
+            // Get the link elements
+            const loginLink = document.getElementById('login-link');
+            const registerLink = document.getElementById('register-link');
+
+            // Add listener for login link
+            loginLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = loginHTML;
                 addAuthFormListeners(auth, db);
+                // Manage active state
+                loginLink.classList.add('active-link');
+                registerLink.classList.remove('active-link');
             });
-            document.getElementById('register-link').addEventListener('click', (e) => {
+
+            // Add listener for register link
+            registerLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = registerHTML;
                 addAuthFormListeners(auth, db);
+                // Manage active state
+                registerLink.classList.add('active-link');
+                loginLink.classList.remove('active-link');
             });
         }
     });
