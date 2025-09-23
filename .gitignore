@@ -1,1 +1,22 @@
+functions/node_modules/
+npm-debug.log
+
+# Firebase
+# Ignore Firebase emulator data, logs, and project-specific aliases
+.firebase/
+firebase-debug.log
+.firebaserc
+
+# Environment variables
 .env
+.env.*
+*.env
+
+# Operating System files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+# For editors like VS Code and WebStorm
+.vscode/
+.idea/
