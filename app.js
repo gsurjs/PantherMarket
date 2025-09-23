@@ -376,7 +376,7 @@ function addListingFormListener(auth, db, storage) {
                         document.getElementById('create-listing-btn').addEventListener('click', () => {
                             appContent.innerHTML = createListingHTML;
                             addListingFormListener(auth, db, storage);
-                        	loadAllListings(db); // Refresh listings on the page
+                        	loadAllListings(auth, db, storage); // Refresh listings on the page
                         });
                     }).catch(error => {
                         console.error("Error adding document: ", error);
