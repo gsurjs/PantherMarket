@@ -125,6 +125,7 @@ async function initializeApp() {
         // Now that Firebase is initialized, set up the auth listener
         setupAuthListener(auth, db, storage);
         loadAllListings(auth, db, storage);
+        setupSearch(auth, db, storage);
 
     } catch (error) {
         console.error('Failed to initialize Firebase:', error);
@@ -174,15 +175,57 @@ function setupAuthListener(auth, db, storage) {
     });
 }
 
+// --- FUNCTION TO SETUP SEARCH ---
+function setupSearch(auth, db, storage) {
+    const searchForm = document.getElementById('search-form');
+    const searchInput = document.getElementById('search-input');
+
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const searchTerm = searchInput.value.trim();
+        loadAllListings(auth, db, storage, searchTerm);
+    });
+
+    // Reload all listings when the search bar is cleared by the user
+    searchInput.addEventListener('input', (e) => {
+        if (e.target.value.trim() === '') {
+            loadAllListings(auth, db, storage); // Load all listings without a filter
+        }
+    });
+}
+
 // --- FUNCTION TO LOAD ALL LISTINGS ---
-function loadAllListings(auth, db, storage) {
-    db.collection("listings").orderBy("createdAt", "desc").onSnapshot((querySnapshot) => {
+function loadAllListings(auth, db, storage, searchTerm = '') {
+    let query;
+    const listingsCollection = db.collection("listings");
+
+    if (searchTerm) {
+        const lowerCaseSearchTerm = searchTerm.toLowerCase();
+        // Query for titles that start with the search term (case-insensitive).
+        // Firestore requires ordering by the same field you are filtering on with a range.
+        // This means search results will be alphabetical, not by creation date.
+        query = listingsCollection.orderBy("title_lowercase")
+                                  .startAt(lowerCaseSearchTerm)
+                                  .endAt(lowerCaseSearchTerm + '\uf8ff');
+    } else {
+        // Default query: get all listings, ordered by most recent
+        query = listingsCollection.orderBy("createdAt", "desc");
+    }
+
+    query.onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
-        querySnapshot.forEach((doc) => {
-            listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
-        });
+        if (querySnapshot.empty) {
+            listingsGrid.innerHTML = '<p>No listings found.</p>';
+        } else {
+            querySnapshot.forEach((doc) => {
+                listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
+            });
+        }
         // after all cards are on page, add listeners to their respective buttons
         addCardEventListeners(auth, db, storage);
+    }, (error) => {
+        console.error("Error fetching listings:", error);
+        listingsGrid.innerHTML = '<p class="error">Could not load listings.</p>';
     });
 }
 
@@ -255,7 +298,8 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
         db.collection('listings').doc(listingId).update({
             title: updatedTitle,
             description: updatedDesc,
-            price: Number(updatedPrice)
+            price: Number(updatedPrice),
+            title_lowercase: updatedTitle.toLowerCase()
         }).then(() => {
             alert('Listing updated successfully!');
             showItemDetails(auth, db, storage, listingId);
@@ -306,6 +350,7 @@ function addListingFormListener(auth, db, storage) {
                     // 3. Save Listing to Firestore
                     db.collection("listings").add({
                         title: title,
+                        title_lowercase: title.toLowerCase(),
                         description: description,
                         price: Number(price),
                         imageUrl: downloadURL,
