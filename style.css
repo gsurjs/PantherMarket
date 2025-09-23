@@ -108,6 +108,10 @@ button:hover {
     object-fit: cover;
 }
 
+.listing-card button {
+    marigin-bottom: 1.5rem;
+}
+
 .listing-card-info {
     padding: 1rem;
 }
