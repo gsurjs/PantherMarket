@@ -69,7 +69,7 @@ const listingCardHTML = (listing, id) => `
     </div>
 `;
 
-const itemDetailsHTML = (listing) => `
+const itemDetailsHTML = (listing, isOwner) => `
     <div class="item-details">
         <button id="back-to-listings-btn">&larr; Back to Listings</button>
         <h2>${listing.title}</h2>
@@ -77,6 +77,12 @@ const itemDetailsHTML = (listing) => `
         <p class="price">$${listing.price}</p>
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
+        ${isOwner ? `
+            <div class="owner-actions">
+                <button id="edit-listing-btn">Edit</button>
+                <button id="delete-listing-btn">Delete</button>
+            </div>
+        ` : ''}
     </div>
 `;
 
@@ -105,7 +111,7 @@ async function initializeApp() {
 
         // Now that Firebase is initialized, set up the auth listener
         setupAuthListener(auth, db, storage);
-        loadAllListings(auth, db);
+        loadAllListings(auth, db, storage);
 
     } catch (error) {
         console.error('Failed to initialize Firebase:', error);
@@ -157,14 +163,14 @@ function setupAuthListener(auth, db, storage) {
 }
 
 // --- FUNCTION TO LOAD ALL LISTINGS ---
-function loadAllListings(auth, db) {
+function loadAllListings(auth, db, storage) {
     db.collection("listings").orderBy("createdAt", "desc").onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
         querySnapshot.forEach((doc) => {
             listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
         });
         // after all cards are on page, add listeners to their respective buttons
-        addCardEventListeners(auth, db);
+        addCardEventListeners(auth, db, storage);
     });
 }
 
@@ -238,42 +244,64 @@ function addListingFormListener(auth, db, storage) {
 }
 
 // --FUNCTION FOR FETCHING SPECIFIC LISTING DATA FROM FIRESTORE TO DISPLAY--
-function addCardEventListeners(auth, db) {
+function addCardEventListeners(auth, db, storage) {
     const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
     viewDetailsButtons.forEach(button => {
         button.addEventListener('click', (e) => {
             const currentUser = auth.currentUser;
+            const card = e.target.closest('.listing-card');
+            const listingId = card.dataset.id;
 
-            // ** THE FIX IS HERE: Check if user is logged in and verified **
-            if (currentUser && currentUser.emailVerified) {
-                // If verified, proceed to show the details
-                const card = e.target.closest('.listing-card');
-                const listingId = card.dataset.id;
 
-                db.collection('listings').doc(listingId).get().then(doc => {
-                    if (doc.exists) {
-                        document.getElementById('listings-section').style.display = 'none';
-                        appContent.innerHTML = itemDetailsHTML(doc.data());
+            db.collection('listings').doc(listingId).get().then(doc => {
+                if (doc.exists) {
+                    const listingData = doc.data();
+                    const isOwner = currentUser && currentUser.uid === listingData.sellerId;
 
-                        document.getElementById('back-to-listings-btn').addEventListener('click', () => {
-                            document.getElementById('listings-section').style.display = 'block';
-                            appContent.innerHTML = welcomeHTML(currentUser); // Go back to welcome screen
-                             document.getElementById('create-listing-btn').addEventListener('click', () => {
-                                appContent.innerHTML = createListingHTML;
-                                addListingFormListener(auth, db, storage); // 'storage' needs to be in scope
-                            });
+                    // Show the details view
+                    document.getElementById('listings-section').style.display = 'none';
+                    appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
+
+                    // Add listener for the "Back" button
+                    document.getElementById('back-to-listings-btn').addEventListener('click', () => {
+                        document.getElementById('listings-section').style.display = 'block';
+                        appContent.innerHTML = welcomeHTML(currentUser);
+                        document.getElementById('create-listing-btn').addEventListener('click', () => {
+                           appContent.innerHTML = createListingHTML;
+                           addListingFormListener(auth, db, storage);
                         });
-                    } else {
-                        console.error("No such document!");
-                    }
-                }).catch(error => {
-                    console.error("Error getting document:", error);
-                });
+                    });
 
-            } else {
-                // If not verified or not logged in, show the access denied message
-                appContent.innerHTML = accessDeniedHTML;
-            }
+                    // If the user is the owner, add listeners for Edit and Delete buttons
+                    if (isOwner) {
+                        document.getElementById('delete-listing-btn').addEventListener('click', () => {
+                            if (confirm('Are you sure you want to delete this listing? This cannot be undone.')) {
+                                // 1. Delete the image from Storage
+                                const imageRef = storage.refFromURL(listingData.imageUrl);
+                                imageRef.delete().then(() => {
+                                    // 2. Delete the document from Firestore
+                                    db.collection('listings').doc(listingId).delete().then(() => {
+                                        alert('Listing deleted successfully.');
+                                        document.getElementById('listings-section').style.display = 'block';
+                                        appContent.innerHTML = welcomeHTML(currentUser);
+                                         document.getElementById('create-listing-btn').addEventListener('click', () => {
+                                            appContent.innerHTML = createListingHTML;
+                                            addListingFormListener(auth, db, storage);
+                                        });
+                                    }).catch(error => console.error("Error deleting document: ", error));
+                                }).catch(error => console.error("Error deleting image: ", error));
+                            }
+                        });
+
+                        document.getElementById('edit-listing-btn').addEventListener('click', () => {
+                            // We will add the edit functionality in a future step
+                            alert('Edit functionality coming soon!');
+                        });
+                    }
+                } else {
+                    console.error("No such document!");
+                }
+            }).catch(error => console.error("Error getting document:", error));
         });
     });
 }
