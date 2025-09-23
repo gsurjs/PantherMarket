@@ -308,7 +308,7 @@ function addCardEventListeners(auth, db, storage) {
 
             } else {
                 // If user is logged out or not verified, show the access denied pop up instead
-                alert('You must be a logged-in and verified user to view details. Please log in or register.');
+                alert('You must be logged-in and verified to view details. Please log in or register.');
             }
         });
     });
