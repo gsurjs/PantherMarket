@@ -111,15 +111,12 @@ button:hover {
 /* Styling for the Item Details View */
 .item-details {
     padding: 1rem;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 
 .item-details img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
+    max-width: 100%; 
+    height: auto;        
+    border-radius: 8px;   
     margin-bottom: 1rem;
 }
 
@@ -128,27 +125,12 @@ button:hover {
 }
 
 .item-details .price {
-    font-size: 1.75rem;
+    font-size: 1.5rem;
     font-weight: bold;
     color: #0033a0; /* GSU Blue */
-}
-
-.item-details .description {
-    margin: 1rem 0;
-    line-height: 1.6;
 }
 
 .item-details .seller {
     color: #555;
     font-style: italic;
-    font-size: 0.9rem;
-}
-
-#back-to-listings-btn {
-    margin-bottom: 1rem;
-    background-color: #6c757d;
-}
-
-#back-to-listings-btn:hover {
-    background-color: #5a6268;
 }
