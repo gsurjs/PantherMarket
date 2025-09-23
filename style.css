@@ -68,11 +68,24 @@ button:hover {
     font-size: 1rem;
 }
 
+#nav-links a:hover {
+    text-decoration: underline;
+}
+
+.active-link {
+    text-decoration: underline;
+    font-weight: bold;
+}
+
 /* listing styles */
 
 #listings-section {
     max-width: 1200px;
     margin: 2rem auto;
+}
+
+#search-form {
+    margin-bottom: 1.5rem;
 }
 
 #listings-grid {
