@@ -68,11 +68,24 @@ button:hover {
     font-size: 1rem;
 }
 
+#nav-links a:hover {
+    text-decoration: underline;
+}
+
+.active-link {
+    text-decoration: underline;
+    font-weight: bold;
+}
+
 /* listing styles */
 
 #listings-section {
     max-width: 1200px;
     margin: 2rem auto;
+}
+
+#search-form {
+    margin-bottom: 1.5rem;
 }
 
 #listings-grid {
@@ -93,6 +106,11 @@ button:hover {
     width: 100%;
     height: 200px;
     object-fit: cover;
+}
+
+.listing-card .view-details-btn {
+    margin-top: 0.75rem;
+    width: 100%;
 }
 
 .listing-card-info {
@@ -133,4 +151,16 @@ button:hover {
 .item-details .seller {
     color: #555;
     font-style: italic;
+}
+
+/* Adds space below the 'Back' button on the details page */
+#back-to-listings-btn {
+    margin-bottom: 1.5rem;
+}
+
+/* Styles the container for Edit/Delete buttons */
+.owner-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
 }
