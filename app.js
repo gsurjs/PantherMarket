@@ -30,7 +30,7 @@ const registrationSuccessHTML = `
     <p>If you've clicked the link in your email and haven't been redirected, try refreshing this page.</p>
 `;
 
-//unverified user template that shows if user isn't verified
+// unverified user template that shows if user isn't verified
 const verifyEmailHTML = (email) => `
     <h2>Verify Your Email</h2>
     <p>A verification link was sent to <strong>${email}</strong>.</p>
@@ -78,6 +78,13 @@ const itemDetailsHTML = (listing) => `
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
     </div>
+`;
+
+// Access Denied template
+const accessDeniedHTML = `
+    <h2>Access Denied</h2>
+    <p>You must be a registered and verified GSU user to view listing details.</p>
+    <p>Please log in or register to continue.</p>
 `;
 
 
@@ -150,14 +157,14 @@ function setupAuthListener(auth, db, storage) {
 }
 
 // --- FUNCTION TO LOAD ALL LISTINGS ---
-function loadAllListings(db) {
+function loadAllListings(auth, db) {
     db.collection("listings").orderBy("createdAt", "desc").onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
         querySnapshot.forEach((doc) => {
             listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
         });
         // after all cards are on page, add listeners to their respective buttons
-        addCardEventListeners(db);
+        addCardEventListeners(auth, db);
     });
 }
 
@@ -231,34 +238,46 @@ function addListingFormListener(auth, db, storage) {
 }
 
 // --FUNCTION FOR FETCHING SPECIFIC LISTING DATA FROM FIRESTORE TO DISPLAY--
-function addCardEventListeners(db) {
+function addCardEventListeners(auth, db) {
     const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
     viewDetailsButtons.forEach(button => {
         button.addEventListener('click', (e) => {
-            const card = e.target.closest('.listing-card');
-            const listingId = card.dataset.id;
+            const currentUser = auth.currentUser;
 
-            // Fetch the single document from Firestore using its ID
-            db.collection('listings').doc(listingId).get().then(doc => {
-                if (doc.exists) {
-                    // Hide the main listings grid and show the details view
-                    document.getElementById('listings-section').style.display = 'none';
-                    appContent.innerHTML = itemDetailsHTML(doc.data());
+            // ** THE FIX IS HERE: Check if user is logged in and verified **
+            if (currentUser && currentUser.emailVerified) {
+                // If verified, proceed to show the details
+                const card = e.target.closest('.listing-card');
+                const listingId = card.dataset.id;
 
-                    // Add a listener for the "Back" button
-                    document.getElementById('back-to-listings-btn').addEventListener('click', () => {
-                        document.getElementById('listings-section').style.display = 'block';
-                        appContent.innerHTML = ''; // Clear the details view
-                    });
-                } else {
-                    console.error("No such document!");
-                }
-            }).catch(error => {
-                console.error("Error getting document:", error);
-            });
+                db.collection('listings').doc(listingId).get().then(doc => {
+                    if (doc.exists) {
+                        document.getElementById('listings-section').style.display = 'none';
+                        appContent.innerHTML = itemDetailsHTML(doc.data());
+
+                        document.getElementById('back-to-listings-btn').addEventListener('click', () => {
+                            document.getElementById('listings-section').style.display = 'block';
+                            appContent.innerHTML = welcomeHTML(currentUser); // Go back to welcome screen
+                             document.getElementById('create-listing-btn').addEventListener('click', () => {
+                                appContent.innerHTML = createListingHTML;
+                                addListingFormListener(auth, db, storage); // 'storage' needs to be in scope
+                            });
+                        });
+                    } else {
+                        console.error("No such document!");
+                    }
+                }).catch(error => {
+                    console.error("Error getting document:", error);
+                });
+
+            } else {
+                // If not verified or not logged in, show the access denied message
+                appContent.innerHTML = accessDeniedHTML;
+            }
         });
     });
 }
+
 
 // --- FUNCTION TO ADD EVENT LISTENERS TO AUTH FORMS ---
 function addAuthFormListeners(auth, db) {
