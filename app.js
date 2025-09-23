@@ -186,6 +186,60 @@ function loadAllListings(auth, db, storage) {
     });
 }
 
+// This function renders the details page AND attaches all button listeners.
+function showItemDetails(auth, db, storage, listingId) {
+    db.collection('listings').doc(listingId).get().then(doc => {
+        if (doc.exists) {
+            const listingData = doc.data();
+            const currentUser = auth.currentUser;
+            const isOwner = currentUser && currentUser.uid === listingData.sellerId;
+
+            // Show the details view
+            document.getElementById('listings-section').style.display = 'none';
+            appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
+
+            // --- Attach Listeners ---
+            // Listener for the "Back" button
+            document.getElementById('back-to-listings-btn').addEventListener('click', () => {
+                document.getElementById('listings-section').style.display = 'block';
+                appContent.innerHTML = welcomeHTML(currentUser);
+                document.getElementById('create-listing-btn').addEventListener('click', () => {
+                   appContent.innerHTML = createListingHTML;
+                   addListingFormListener(auth, db, storage);
+                });
+            });
+
+            // If the user is the owner, add listeners for Edit and Delete buttons
+            if (isOwner) {
+                document.getElementById('edit-listing-btn').addEventListener('click', () => {
+                    appContent.innerHTML = editListingHTML(listingData);
+                    addEditFormListener(auth, db, storage, listingId);
+                });
+
+                document.getElementById('delete-listing-btn').addEventListener('click', () => {
+                    if (confirm('Are you sure you want to delete this listing?')) {
+                        const imageRef = storage.refFromURL(listingData.imageUrl);
+                        imageRef.delete().then(() => {
+                            db.collection('listings').doc(listingId).delete().then(() => {
+                                alert('Listing deleted successfully.');
+                                document.getElementById('listings-section').style.display = 'block';
+                                appContent.innerHTML = welcomeHTML(currentUser);
+                                 document.getElementById('create-listing-btn').addEventListener('click', () => {
+                                    appContent.innerHTML = createListingHTML;
+                                    addListingFormListener(auth, db, storage);
+                                });
+                            });
+                        });
+                    }
+                });
+            }
+        } else {
+            console.error("No such document!");
+            alert("This listing may have been deleted.");
+        }
+    });
+}
+
 // --- FUNCTION TO ADD EDIT FORM LISTENER ---
 function addEditFormListener(auth, db, storage, listingId, originalDoc) {
     const editForm = document.getElementById('edit-listing-form');
