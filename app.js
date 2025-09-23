@@ -154,8 +154,10 @@ function loadAllListings(db) {
     db.collection("listings").orderBy("createdAt", "desc").onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
         querySnapshot.forEach((doc) => {
-            listingsGrid.innerHTML += listingCardHTML(doc.data());
+            listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
         });
+        //after all cards are on page, add listeners to their respective buttons
+        addCardEventListeners(db);
     });
 }
 
@@ -224,6 +226,36 @@ function addListingFormListener(auth, db, storage) {
         document.getElementById('create-listing-btn').addEventListener('click', () => {
             appContent.innerHTML = createListingHTML;
             addListingFormListener(auth, db, storage);
+        });
+    });
+}
+
+// --FUNCTION FOR FETCHING SPECIFIC LISTING DATA FROM FIRESTORE TO DISPLAY--
+function addCardEventListeners(db) {
+    const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
+    viewDetailsButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            const card = e.target.closest('.listing-card');
+            const listingId = card.dataset.id;
+
+            // Fetch the single document from Firestore using its ID
+            db.collection('listings').doc(listingId).get().then(doc => {
+                if (doc.exists) {
+                    // Hide the main listings grid and show the details view
+                    document.getElementById('listings-section').style.display = 'none';
+                    appContent.innerHTML = itemDetailsHTML(doc.data());
+
+                    // Add a listener for the "Back" button
+                    document.getElementById('back-to-listings-btn').addEventListener('click', () => {
+                        document.getElementById('listings-section').style.display = 'block';
+                        appContent.innerHTML = ''; // Clear the details view
+                    });
+                } else {
+                    console.error("No such document!");
+                }
+            }).catch(error => {
+                console.error("Error getting document:", error);
+            });
         });
     });
 }
