@@ -147,3 +147,15 @@ button:hover {
     color: #555;
     font-style: italic;
 }
+
+/* Adds space below the 'Back' button on the details page */
+#back-to-listings-btn {
+    margin-bottom: 1.5rem;
+}
+
+/* Styles the container for Edit/Delete buttons */
+.owner-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 1rem;
+}
