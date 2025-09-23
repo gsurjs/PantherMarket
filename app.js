@@ -64,7 +64,19 @@ const listingCardHTML = (listing) => `
         <div class="listing-card-info">
             <h3>${listing.title}</h3>
             <p>$${listing.price}</p>
+            <button class="view-details-btn">View Details</button>
         </div>
+    </div>
+`;
+
+const itemDetailsHTML = (listing) => `
+    <div class="item-details">
+        <button id="back-to-listings-btn">&larr; Back to Listings</button>
+        <h2>${listing.title}</h2>
+        <img src="${listing.imageUrl}" alt="${listing.title}">
+        <p class="price">$${listing.price}</p>
+        <p class="description">${listing.description}</p>
+        <p class="seller">Sold by: ${listing.sellerEmail}</p>
     </div>
 `;
 
