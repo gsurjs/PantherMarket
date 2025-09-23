@@ -298,7 +298,7 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
         db.collection('listings').doc(listingId).update({
             title: updatedTitle,
             description: updatedDesc,
-            price: Number(updatedPrice)
+            price: Number(updatedPrice),
             title_lowercase: updatedTitle.toLowerCase()
         }).then(() => {
             alert('Listing updated successfully!');
