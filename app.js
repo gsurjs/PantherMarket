@@ -58,8 +58,8 @@ const createListingHTML = `
     <p id="form-error" class="error"></p>
 `;
 
-const listingCardHTML = (listing) => `
-    <div class="listing-card">
+const listingCardHTML = (listing, id) => `
+    <div class="listing-card" data-id="${id}">
         <img src="${listing.imageUrl}" alt="${listing.title}">
         <div class="listing-card-info">
             <h3>${listing.title}</h3>
@@ -156,7 +156,7 @@ function loadAllListings(db) {
         querySnapshot.forEach((doc) => {
             listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
         });
-        //after all cards are on page, add listeners to their respective buttons
+        // after all cards are on page, add listeners to their respective buttons
         addCardEventListeners(db);
     });
 }
