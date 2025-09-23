@@ -307,16 +307,8 @@ function addCardEventListeners(auth, db, storage) {
                 });
 
             } else {
-                // If user is logged out or not verified, show the access denied screen
-                document.getElementById('listings-section').style.display = 'none';
-                appContent.innerHTML = accessDeniedHTML;
-                
-                // Make the "Back" button on the access denied screen work
-                document.getElementById('back-to-listings-btn').addEventListener('click', () => {
-                    document.getElementById('listings-section').style.display = 'block';
-                    appContent.innerHTML = loginHTML; // Go back to the login screen
-                    addAuthFormListeners(auth, db);
-                });
+                // If user is logged out or not verified, show the access denied pop up instead
+                alert('You must be a logged-in and verified user to view details. Please log in or register.');
             }
         });
     });
