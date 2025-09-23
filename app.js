@@ -135,15 +135,7 @@ async function initializeApp() {
 
 // --- AUTHENTICATION STATE LISTENER ---
 function setupAuthListener(auth, db, storage) {
-    // The listener callback is now async to allow for 'await'
-    auth.onAuthStateChanged(async (user) => { 
-        if (user) {
-            // Force a reload of the user's state from Firebase.
-            // This ensures emailVerified is up-to-date.
-            await user.reload(); 
-        }
-
-        // Now, with the reloaded user object, perform the checks.
+    auth.onAuthStateChanged(user => {
         if (user && user.emailVerified) {
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
             appContent.innerHTML = welcomeHTML(user);
@@ -160,7 +152,6 @@ function setupAuthListener(auth, db, storage) {
             document.getElementById('resend-verification-button').addEventListener('click', () => {
                 user.sendEmailVerification().then(() => alert('Verification email sent!'));
             });
-             document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
         } else {
             // User is signed out
             navLinks.innerHTML = `
@@ -168,23 +159,28 @@ function setupAuthListener(auth, db, storage) {
                 <a href="#" id="register-link" class="active-link">Register</a>
             `;
             appContent.innerHTML = loginHTML;
-            addAuthFormListeners(auth);
+            addAuthFormListeners(auth, db);
 
+            // Get the link elements
             const loginLink = document.getElementById('login-link');
             const registerLink = document.getElementById('register-link');
 
+            // Add listener for login link
             loginLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = loginHTML;
-                addAuthFormListeners(auth);
+                addAuthFormListeners(auth, db);
+                // Manage active state
                 loginLink.classList.add('active-link');
                 registerLink.classList.remove('active-link');
             });
 
+            // Add listener for register link
             registerLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = registerHTML;
-                addAuthFormListeners(auth);
+                addAuthFormListeners(auth, db);
+                // Manage active state
                 registerLink.classList.add('active-link');
                 loginLink.classList.remove('active-link');
             });
@@ -380,7 +376,7 @@ function addListingFormListener(auth, db, storage) {
                         document.getElementById('create-listing-btn').addEventListener('click', () => {
                             appContent.innerHTML = createListingHTML;
                             addListingFormListener(auth, db, storage);
-                        	loadAllListings(auth, db, storage); // Refresh listings on the page
+                        	loadAllListings(db); // Refresh listings on the page
                         });
                     }).catch(error => {
                         console.error("Error adding document: ", error);
