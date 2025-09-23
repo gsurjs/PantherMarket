@@ -107,3 +107,30 @@ button:hover {
     margin: 0;
     color: #555;
 }
+
+/* Styling for the Item Details View */
+.item-details {
+    padding: 1rem;
+}
+
+.item-details img {
+    max-width: 100%; 
+    height: auto;        
+    border-radius: 8px;   
+    margin-bottom: 1rem;
+}
+
+.item-details h2 {
+    margin-top: 0;
+}
+
+.item-details .price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #0033a0; /* GSU Blue */
+}
+
+.item-details .seller {
+    color: #555;
+    font-style: italic;
+}
