@@ -186,7 +186,7 @@ function loadAllListings(auth, db, storage) {
     });
 }
 
-// This function renders the details page AND attaches all button listeners.
+// reusable function that renders the details page AND attaches all button listeners.
 function showItemDetails(auth, db, storage, listingId) {
     db.collection('listings').doc(listingId).get().then(doc => {
         if (doc.exists) {
@@ -256,30 +256,17 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
             title: updatedTitle,
             description: updatedDesc,
             price: Number(updatedPrice)
-        })
-        .then(() => {
+        }).then(() => {
             alert('Listing updated successfully!');
-            // Refresh the details view with the updated data
-            const updatedData = { ...originalDoc.data(), title: updatedTitle, description: updatedDesc, price: updatedPrice };
-            appContent.innerHTML = itemDetailsHTML(updatedData, true); // true because only owner can edit
-             // Re-attach listeners for the buttons on the details page
-            document.getElementById('back-to-listings-btn').addEventListener('click', () => { /* ... */ });
-            document.getElementById('edit-listing-btn').addEventListener('click', () => { /* ... */ });
-            document.getElementById('delete-listing-btn').addEventListener('click', () => { /* ... */ });
-        })
-        .catch(error => {
-            console.error("Error updating document: ", error);
-            formError.textContent = "Failed to update listing.";
+            showItemDetails(auth, db, storage, listingId);
+        }).catch(error => {
+            console.error("Error updating document:", error);
+            document.getElementById('form-error').textContent = "Failed to update listing.";
         });
     });
 
     document.getElementById('cancel-edit-btn').addEventListener('click', () => {
-        // Just go back to the details view
-        appContent.innerHTML = itemDetailsHTML(originalDoc.data(), true);
-         // Re-attach listeners
-        document.getElementById('back-to-listings-btn').addEventListener('click', () => { /* ... */ });
-        document.getElementById('edit-listing-btn').addEventListener('click', () => { /* ... */ });
-        document.getElementById('delete-listing-btn').addEventListener('click', () => { /* ... */ });
+        showItemDetails(auth, db, storage, listingId);
     });
 }
 
