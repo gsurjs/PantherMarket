@@ -133,7 +133,6 @@ function setupAuthListener(auth, db, storage) {
                 addListingFormListener(auth, db, storage);
             });
         } else if (user && !user.emailVerified) {
-            // Your logic for unverified users
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
             appContent.innerHTML = verifyEmailHTML(user.email);
             document.getElementById('resend-verification-button').addEventListener('click', () => {
@@ -249,59 +248,76 @@ function addCardEventListeners(auth, db, storage) {
     viewDetailsButtons.forEach(button => {
         button.addEventListener('click', (e) => {
             const currentUser = auth.currentUser;
-            const card = e.target.closest('.listing-card');
-            const listingId = card.dataset.id;
+            
+            // Security Check: User must be logged in AND verified to view details.
+            if (currentUser && currentUser.emailVerified) {
+                const card = e.target.closest('.listing-card');
+                const listingId = card.dataset.id;
 
+                db.collection('listings').doc(listingId).get().then(doc => {
+                    if (doc.exists) {
+                        const listingData = doc.data();
+                        const isOwner = currentUser.uid === listingData.sellerId;
 
-            db.collection('listings').doc(listingId).get().then(doc => {
-                if (doc.exists) {
-                    const listingData = doc.data();
-                    const isOwner = currentUser && currentUser.uid === listingData.sellerId;
+                        // Show the item details page
+                        document.getElementById('listings-section').style.display = 'none';
+                        appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
 
-                    // Show the details view
-                    document.getElementById('listings-section').style.display = 'none';
-                    appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
-
-                    // Add listener for the "Back" button
-                    document.getElementById('back-to-listings-btn').addEventListener('click', () => {
-                        document.getElementById('listings-section').style.display = 'block';
-                        appContent.innerHTML = welcomeHTML(currentUser);
-                        document.getElementById('create-listing-btn').addEventListener('click', () => {
-                           appContent.innerHTML = createListingHTML;
-                           addListingFormListener(auth, db, storage);
+                        // Make the "Back to Listings" button work
+                        document.getElementById('back-to-listings-btn').addEventListener('click', () => {
+                            document.getElementById('listings-section').style.display = 'block';
+                            // Show the welcome screen again for the logged-in user
+                            appContent.innerHTML = welcomeHTML(currentUser);
+                            // Re-attach the listener for the "Create Listing" button
+                            document.getElementById('create-listing-btn').addEventListener('click', () => {
+                               appContent.innerHTML = createListingHTML;
+                               addListingFormListener(auth, db, storage);
+                            });
                         });
-                    });
+                        
+                        // If the user owns the listing, make the Edit/Delete buttons work
+                        if (isOwner) {
+                            document.getElementById('delete-listing-btn').addEventListener('click', () => {
+                                if (confirm('Are you sure you want to delete this listing?')) {
+                                    const imageRef = storage.refFromURL(listingData.imageUrl);
+                                    imageRef.delete().then(() => {
+                                        db.collection('listings').doc(listingId).delete().then(() => {
+                                            alert('Listing deleted successfully.');
+                                            document.getElementById('listings-section').style.display = 'block';
+                                            appContent.innerHTML = welcomeHTML(currentUser);
+                                            document.getElementById('create-listing-btn').addEventListener('click', () => {
+                                                appContent.innerHTML = createListingHTML;
+                                                addListingFormListener(auth, db, storage);
+                                            });
+                                        }).catch(error => console.error("Error deleting document: ", error));
+                                    }).catch(error => console.error("Error deleting image: ", error));
+                                }
+                            });
 
-                    // If the user is the owner, add listeners for Edit and Delete buttons
-                    if (isOwner) {
-                        document.getElementById('delete-listing-btn').addEventListener('click', () => {
-                            if (confirm('Are you sure you want to delete this listing? This cannot be undone.')) {
-                                // 1. Delete the image from Storage
-                                const imageRef = storage.refFromURL(listingData.imageUrl);
-                                imageRef.delete().then(() => {
-                                    // 2. Delete the document from Firestore
-                                    db.collection('listings').doc(listingId).delete().then(() => {
-                                        alert('Listing deleted successfully.');
-                                        document.getElementById('listings-section').style.display = 'block';
-                                        appContent.innerHTML = welcomeHTML(currentUser);
-                                         document.getElementById('create-listing-btn').addEventListener('click', () => {
-                                            appContent.innerHTML = createListingHTML;
-                                            addListingFormListener(auth, db, storage);
-                                        });
-                                    }).catch(error => console.error("Error deleting document: ", error));
-                                }).catch(error => console.error("Error deleting image: ", error));
-                            }
-                        });
-
-                        document.getElementById('edit-listing-btn').addEventListener('click', () => {
-                            // We will add the edit functionality in a future step
-                            alert('Edit functionality coming soon!');
-                        });
+                            document.getElementById('edit-listing-btn').addEventListener('click', () => {
+                                alert('Edit functionality will be added in a future update!');
+                            });
+                        }
+                    } else {
+                        console.error("Error: No such document!");
+                        alert("Sorry, this listing could not be found.");
                     }
-                } else {
-                    console.error("No such document!");
-                }
-            }).catch(error => console.error("Error getting document:", error));
+                }).catch(error => {
+                    console.error("Error getting document:", error);
+                });
+
+            } else {
+                // If user is logged out or not verified, show the access denied screen
+                document.getElementById('listings-section').style.display = 'none';
+                appContent.innerHTML = accessDeniedHTML;
+                
+                // Make the "Back" button on the access denied screen work
+                document.getElementById('back-to-listings-btn').addEventListener('click', () => {
+                    document.getElementById('listings-section').style.display = 'block';
+                    appContent.innerHTML = loginHTML; // Go back to the login screen
+                    addAuthFormListeners(auth, db);
+                });
+            }
         });
     });
 }
