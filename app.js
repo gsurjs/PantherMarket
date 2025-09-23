@@ -153,6 +153,7 @@ function setupAuthListener(auth, db, storage) {
                 user.sendEmailVerification().then(() => alert('Verification email sent!'));
             });
         } else {
+            document.getElementById('app-content').style.display = 'block';
             // User is signed out. Show the form to send a sign-in link.
             navLinks.innerHTML = ''; // No links needed
             appContent.innerHTML = emailLinkLoginHTML; // This is the HTML template for sending the link
