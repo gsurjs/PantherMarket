@@ -108,8 +108,9 @@ button:hover {
     object-fit: cover;
 }
 
-.listing-card button {
-    marigin-top: 1.5rem;
+.listing-card .view-details-btn {
+    margin-top: 0.75rem;
+    width: 100%;
 }
 
 .listing-card-info {
