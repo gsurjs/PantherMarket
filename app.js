@@ -105,7 +105,7 @@ async function initializeApp() {
 
         // Now that Firebase is initialized, set up the auth listener
         setupAuthListener(auth, db, storage);
-        loadAllListings(db);
+        loadAllListings(auth, db);
 
     } catch (error) {
         console.error('Failed to initialize Firebase:', error);
