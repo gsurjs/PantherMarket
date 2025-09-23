@@ -86,6 +86,19 @@ const itemDetailsHTML = (listing, isOwner) => `
     </div>
 `;
 
+const editListingHTML = (listing) => `
+    <h2>Edit Listing</h2>
+    <form id="edit-listing-form">
+        <input type="text" id="listing-title" value="${listing.title}" required>
+        <textarea id="listing-desc" required>${listing.description}</textarea>
+        <input type="number" id="listing-price" value="${listing.price}" step="0.01" required>
+        <p><em>To change the image, please delete this listing and create a new one.</em></p>
+        <button type="submit">Save Changes</button>
+        <button type="button" id="cancel-edit-btn">Cancel</button>
+    </form>
+    <p id="form-error" class="error"></p>
+`;
+
 // Access Denied template
 const accessDeniedHTML = `
     <h2>Access Denied</h2>
@@ -170,6 +183,49 @@ function loadAllListings(auth, db, storage) {
         });
         // after all cards are on page, add listeners to their respective buttons
         addCardEventListeners(auth, db, storage);
+    });
+}
+
+// --- FUNCTION TO ADD EDIT FORM LISTENER ---
+function addEditFormListener(auth, db, storage, listingId, originalDoc) {
+    const editForm = document.getElementById('edit-listing-form');
+    const formError = document.getElementById('form-error');
+
+    editForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const updatedTitle = document.getElementById('listing-title').value;
+        const updatedDesc = document.getElementById('listing-desc').value;
+        const updatedPrice = document.getElementById('listing-price').value;
+
+        // Update the document in Firestore
+        db.collection('listings').doc(listingId).update({
+            title: updatedTitle,
+            description: updatedDesc,
+            price: Number(updatedPrice)
+        })
+        .then(() => {
+            alert('Listing updated successfully!');
+            // Refresh the details view with the updated data
+            const updatedData = { ...originalDoc.data(), title: updatedTitle, description: updatedDesc, price: updatedPrice };
+            appContent.innerHTML = itemDetailsHTML(updatedData, true); // true because only owner can edit
+             // Re-attach listeners for the buttons on the details page
+            document.getElementById('back-to-listings-btn').addEventListener('click', () => { /* ... */ });
+            document.getElementById('edit-listing-btn').addEventListener('click', () => { /* ... */ });
+            document.getElementById('delete-listing-btn').addEventListener('click', () => { /* ... */ });
+        })
+        .catch(error => {
+            console.error("Error updating document: ", error);
+            formError.textContent = "Failed to update listing.";
+        });
+    });
+
+    document.getElementById('cancel-edit-btn').addEventListener('click', () => {
+        // Just go back to the details view
+        appContent.innerHTML = itemDetailsHTML(originalDoc.data(), true);
+         // Re-attach listeners
+        document.getElementById('back-to-listings-btn').addEventListener('click', () => { /* ... */ });
+        document.getElementById('edit-listing-btn').addEventListener('click', () => { /* ... */ });
+        document.getElementById('delete-listing-btn').addEventListener('click', () => { /* ... */ });
     });
 }
 
@@ -295,7 +351,8 @@ function addCardEventListeners(auth, db, storage) {
                             });
 
                             document.getElementById('edit-listing-btn').addEventListener('click', () => {
-                                alert('Edit functionality will be added in a future update!');
+                                appContent.innerHTML = editListingHTML(listingData);
+                                addEditFormListener(auth, db, storage, listingId, doc);
                             });
                         }
                     } else {
