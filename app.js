@@ -136,35 +136,62 @@ async function initializeApp() {
 // --- AUTHENTICATION STATE LISTENER ---
 function setupAuthListener(auth, db, storage) {
     auth.onAuthStateChanged(user => {
+        // --- State 1: User is LOGGED IN and VERIFIED ---
         if (user && user.emailVerified) {
+            // Show listings and main content, hide the login form area
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('listings-section').style.display = 'block';
+            
+            // Set nav to "Logout" and show the welcome screen
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
             appContent.innerHTML = welcomeHTML(user);
 
+            // Add event listeners for buttons
             document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-            
             document.getElementById('create-listing-btn').addEventListener('click', () => {
                 appContent.innerHTML = createListingHTML;
                 addListingFormListener(auth, db, storage);
             });
+        
+        // --- State 2: User is LOGGED IN but NOT VERIFIED ---
         } else if (user && !user.emailVerified) {
+            // Hide listings, show main content area
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('listings-section').style.display = 'none';
+
+            // Set nav to "Logout" and show the "Verify Email" message
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            appContent.innerHTML = verifyEmailHTML(user.email);
+            appContent.innerHTML = verifyEmailHTML(user.email); 
+            
+            // Add event listeners for buttons
             document.getElementById('resend-verification-button').addEventListener('click', () => {
                 user.sendEmailVerification().then(() => alert('Verification email sent!'));
             });
+            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+        
+        // --- State 3: User is LOGGED OUT ---
         } else {
+            // Hide listings, show main content area
             document.getElementById('app-content').style.display = 'block';
-            // User is signed out. Show the form to send a sign-in link.
-            navLinks.innerHTML = ''; // No links needed
-            appContent.innerHTML = emailLinkLoginHTML; // This is the HTML template for sending the link
+            document.getElementById('listings-section').style.display = 'none';
 
+            // RESTORED: Add the Login and Register links back to the nav bar
+            navLinks.innerHTML = `
+                <a href="#" id="login-link">Login</a>
+                <a href="#" id="register-link">Register</a>
+            `;
+
+            // Display the new unified email sign-in form
+            appContent.innerHTML = emailLinkLoginHTML;
+
+            // Add the listener to the email form
             const emailLinkForm = document.getElementById('email-link-form');
             const authError = document.getElementById('auth-error');
             const submitButton = emailLinkForm.querySelector('button');
 
             emailLinkForm.addEventListener('submit', (e) => {
                 e.preventDefault();
-                authError.textContent = ''; // Clear previous errors
+                authError.textContent = '';
                 
                 const email = document.getElementById('email-link-input').value;
 
@@ -181,13 +208,10 @@ function setupAuthListener(auth, db, storage) {
 
                 sendSignInLink({ email: email, redirectUrl: window.location.href })
                     .then((result) => {
-                        console.log(result.data.message);
-                        appContent.innerHTML = `<h2>Check Your Email</h2><p>A sign-in link has been sent to <strong>${email}</strong>. Please check your inbox to continue.</p>`;
+                        appContent.innerHTML = `<h2>Check Your Email</h2><p>A sign-in link has been sent to <strong>${email}</strong>.</p>`;
                     })
                     .catch((error) => {
-                        console.error("Error calling cloud function:", error);
                         authError.textContent = 'Could not send sign-in link. Please try again.';
-                        
                         submitButton.textContent = 'Send Sign-In Link';
                         submitButton.disabled = false;
                     });
