@@ -535,9 +535,9 @@ function addAuthFormListeners(auth, db) {
 
             const actionCodeSettings = {
                 // send user back to live site
-                url: 'https://panthermarket.app'
+                url: 'https://panthermarket.app',
                 handleCodeInApp: true
-            }
+            };
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
