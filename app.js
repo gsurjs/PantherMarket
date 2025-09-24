@@ -136,51 +136,65 @@ async function initializeApp() {
 // --- AUTHENTICATION STATE LISTENER ---
 function setupAuthListener(auth, db, storage) {
     auth.onAuthStateChanged(user => {
+        // --- State 1: User is LOGGED IN and VERIFIED ---
         if (user && user.emailVerified) {
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('listings-section').style.display = 'block';
+            
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
             appContent.innerHTML = welcomeHTML(user);
 
             document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-            
             document.getElementById('create-listing-btn').addEventListener('click', () => {
                 appContent.innerHTML = createListingHTML;
                 addListingFormListener(auth, db, storage);
             });
+        
+        // --- State 2: User is LOGGED IN but NOT VERIFIED ---
         } else if (user && !user.emailVerified) {
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('listings-section').style.display = 'block';
+
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            appContent.innerHTML = verifyEmailHTML(user.email);
+            appContent.innerHTML = verifyEmailHTML(user.email); 
+            
             document.getElementById('resend-verification-button').addEventListener('click', () => {
                 user.sendEmailVerification().then(() => alert('Verification email sent!'));
             });
+            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+        
+        // --- State 3: User is LOGGED OUT ---
         } else {
-            // User is signed out
+            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('listings-section').style.display = 'block';
+
+            // Set the nav links for login and register
             navLinks.innerHTML = `
                 <a href="#" id="login-link" class="active-link">Login</a>
-                <a href="#" id="register-link" class="active-link">Register</a>
+                <a href="#" id="register-link">Register</a>
             `;
+
+            // Show the login form by default
             appContent.innerHTML = loginHTML;
+
+            // Make the login/register forms and nav links work
             addAuthFormListeners(auth, db);
 
-            // Get the link elements
             const loginLink = document.getElementById('login-link');
             const registerLink = document.getElementById('register-link');
 
-            // Add listener for login link
             loginLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = loginHTML;
-                addAuthFormListeners(auth, db);
-                // Manage active state
+                addAuthFormListeners(auth, db); // Re-attach listeners to the new form
                 loginLink.classList.add('active-link');
                 registerLink.classList.remove('active-link');
             });
 
-            // Add listener for register link
             registerLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = registerHTML;
-                addAuthFormListeners(auth, db);
-                // Manage active state
+                addAuthFormListeners(auth, db); // Re-attach listeners to the new form
                 registerLink.classList.add('active-link');
                 loginLink.classList.remove('active-link');
             });
@@ -336,6 +350,14 @@ function addListingFormListener(auth, db, storage) {
 
     listingForm.addEventListener('submit', (e) => {
         e.preventDefault();
+
+        // -- Security Check for User Verification --
+
+        if (!user || !user.emailVerified) {
+            formError.textContent = "Error: You must have a verified email to create a listing.";
+            return; // Stop the function from proceeding
+        }
+
         const title = document.getElementById('listing-title').value;
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
