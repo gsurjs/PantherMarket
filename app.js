@@ -106,6 +106,18 @@ const accessDeniedHTML = `
     <p>Please log in or register to continue.</p>
 `;
 
+const verifyCodeHTML = (email) => `
+    <h2>Verify Your Email</h2>
+    <p>We sent a 6-digit verification code to <strong>${email}</strong>.</p>
+    <p>Please enter the code below to continue.</p>
+    <form id="verify-code-form">
+        <input type="text" id="code-input" placeholder="123456" required>
+        <button type="submit">Verify</button>
+    </form>
+    <p id="verify-error" class="error"></p>
+    <button id="resend-verification-button">Resend Code</button>
+`;
+
 
 // --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
@@ -156,16 +168,9 @@ function setupAuthListener(auth, db, storage) {
             document.getElementById('listings-section').style.display = 'block';
 
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            appContent.innerHTML = verifyEmailHTML(user.email); 
-            
-            document.getElementById('resend-verification-button').addEventListener('click', () => {
-                const actionCodeSettings = {
-                    // Also update it here for resending the email
-                    url: 'https://panthermarket.app/verify.html',
-                    handleCodeInApp: true
-                };
-                user.sendEmailVerification(actionCodeSettings).then(() => alert('Verification email sent!'));
-            });
+            appContent.innerHTML = verifyCodeHTML(user.email);
+            addVerificationFormListener(auth, db, storage);
+
             document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
         
         // --- State 3: User is LOGGED OUT ---
@@ -203,6 +208,33 @@ function setupAuthListener(auth, db, storage) {
                 registerLink.classList.add('active-link');
                 loginLink.classList.remove('active-link');
             });
+        }
+    });
+}
+
+// -- FUNCTION FOR EMAIL AUTH CODE --
+
+function addVerificationFormListener(auth, db, storage) {
+    const verifyForm = document.getElementById('verify-code-form');
+    const errorEl = document.getElementById('verify-error');
+    const functions = firebase.functions();
+
+    verifyForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = document.getElementById('code-input').value.trim();
+        if (!code) return;
+
+        try {
+            const verifyEmailCode = functions.httpsCallable('verifyEmailCode');
+            const result = await verifyEmailCode({ code: code });
+            
+            if (result.data.success) {
+                // Success! Reload the user to get the new 'emailVerified' status.
+                // onAuthStateChanged will then automatically show the welcome screen.
+                await auth.currentUser.reload();
+            }
+        } catch (error) {
+            errorEl.textContent = error.message;
         }
     });
 }
@@ -541,8 +573,6 @@ function addAuthFormListeners(auth, db) {
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
-                    // Send verification email
-                    userCredential.user.sendEmailVerification(actionCodeSettings);
                     // Create user profile in Firestore
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: userCredential.user.email,
