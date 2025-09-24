@@ -34,8 +34,9 @@ const registrationSuccessHTML = `
 const verifyEmailHTML = (email) => `
     <h2>Verify Your Email</h2>
     <p>A verification link was sent to <strong>${email}</strong>.</p>
-    <p>Please check your inbox and click the link to continue. You will be logged in automatically after verification.</p>
+    <p>Please check your inbox and click the link to activate your account. Once verified, you may need to refresh this page.</p>
     <button id="resend-verification-button">Resend Verification Email</button>
+    <p id="resend-message" class="error" style="color: green;"></p>
 `;
 
 const welcomeHTML = (user) => `
@@ -106,18 +107,6 @@ const accessDeniedHTML = `
     <p>Please log in or register to continue.</p>
 `;
 
-const verifyCodeHTML = (email) => `
-    <h2>Verify Your Email</h2>
-    <p>We sent a 6-digit verification code to <strong>${email}</strong>.</p>
-    <p>Please enter the code below to continue.</p>
-    <form id="verify-code-form">
-        <input type="text" id="code-input" placeholder="123456" required>
-        <button type="submit">Verify</button>
-    </form>
-    <p id="verify-error" class="error"></p>
-    <button id="resend-verification-button">Resend Code</button>
-`;
-
 
 // --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
@@ -147,7 +136,12 @@ async function initializeApp() {
 
 // --- AUTHENTICATION STATE LISTENER ---
 function setupAuthListener(auth, db, storage) {
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async (user) => {
+        if (user) {
+            // Reload user data to get the latest emailVerified status
+            await user.reload();
+        }
+
         // --- State 1: User is LOGGED IN and VERIFIED ---
         if (user && user.emailVerified) {
             document.getElementById('app-content').style.display = 'block';
@@ -165,11 +159,13 @@ function setupAuthListener(auth, db, storage) {
         // --- State 2: User is LOGGED IN but NOT VERIFIED ---
         } else if (user && !user.emailVerified) {
             document.getElementById('app-content').style.display = 'block';
-            document.getElementById('listings-section').style.display = 'block';
+            // Hide listings for unverified users
+            document.getElementById('listings-section').style.display = 'none';
 
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            appContent.innerHTML = verifyCodeHTML(user.email);
-            addVerificationFormListener(auth, db, storage);
+            // UPDATED: Show the "check your email" message instead of the code form.
+            appContent.innerHTML = verifyEmailHTML(user.email);
+            addResendListener(auth); // Add listener for the resend button.
 
             document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
         
@@ -178,16 +174,12 @@ function setupAuthListener(auth, db, storage) {
             document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'block';
 
-            // Set the nav links for login and register
             navLinks.innerHTML = `
                 <a href="#" id="login-link" class="active-link">Login</a>
                 <a href="#" id="register-link">Register</a>
             `;
-
-            // Show the login form by default
             appContent.innerHTML = loginHTML;
 
-            // Make the login/register forms and nav links work
             addAuthFormListeners(auth, db);
 
             const loginLink = document.getElementById('login-link');
@@ -196,7 +188,7 @@ function setupAuthListener(auth, db, storage) {
             loginLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = loginHTML;
-                addAuthFormListeners(auth, db); // Re-attach listeners to the new form
+                addAuthFormListeners(auth, db);
                 loginLink.classList.add('active-link');
                 registerLink.classList.remove('active-link');
             });
@@ -204,7 +196,7 @@ function setupAuthListener(auth, db, storage) {
             registerLink.addEventListener('click', (e) => {
                 e.preventDefault();
                 appContent.innerHTML = registerHTML;
-                addAuthFormListeners(auth, db); // Re-attach listeners to the new form
+                addAuthFormListeners(auth, db);
                 registerLink.classList.add('active-link');
                 loginLink.classList.remove('active-link');
             });
@@ -212,93 +204,30 @@ function setupAuthListener(auth, db, storage) {
     });
 }
 
-// -- FUNCTION FOR EMAIL AUTH CODE --
-
-function addVerificationFormListener(auth, db, storage) {
-    const verifyForm = document.getElementById('verify-code-form');
-    const errorEl = document.getElementById('verify-error');
+// --- NEW FUNCTION TO HANDLE RESENDING VERIFICATION EMAIL ---
+function addResendListener(auth) {
     const resendButton = document.getElementById('resend-verification-button');
-    const functions = firebase.functions();
-
-    if (verifyForm) {
-        verifyForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const codeInput = document.getElementById('code-input');
-            const code = codeInput.value.trim();
-            
-            if (!code || code.length !== 6) {
-                errorEl.textContent = 'Please enter a valid 6-digit code.';
-                return;
-            }
-
-            errorEl.textContent = 'Verifying...';
-            
-            try {
-                const verifyEmailCode = functions.httpsCallable('verifyEmailCode');
-                const result = await verifyEmailCode({ code: code });
-                
-                if (result.data.success) {
-                    errorEl.style.color = 'green';
-                    errorEl.textContent = 'Success! Redirecting...';
-                    
-                    // Force reload the user to get updated emailVerified status
-                    await auth.currentUser.reload();
-                    
-                    // Give feedback before the auth state change happens
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                }
-            } catch (error) {
-                console.error('Verification error:', error);
-                errorEl.style.color = 'red';
-                errorEl.textContent = error.message || 'Invalid code. Please try again.';
-                
-                // Clear the input for retry
-                codeInput.value = '';
-                codeInput.focus();
-            }
-        });
-    }
-
+    const messageEl = document.getElementById('resend-message');
+    
     if (resendButton) {
-        resendButton.addEventListener('click', async (e) => {
-            e.preventDefault();
-            resendButton.disabled = true;
-            resendButton.textContent = 'Sending...';
-            errorEl.textContent = '';
-            
+        resendButton.addEventListener('click', async () => {
             try {
-                const resendVerificationCode = functions.httpsCallable('resendVerificationCode');
-                const result = await resendVerificationCode();
-                
-                if (result.data.success) {
-                    errorEl.style.color = 'green';
-                    errorEl.textContent = result.data.message;
-                    
-                    // Disable resend button for 60 seconds
-                    let countdown = 60;
-                    const interval = setInterval(() => {
-                        countdown--;
-                        if (countdown > 0) {
-                            resendButton.textContent = `Resend in ${countdown}s`;
-                        } else {
-                            clearInterval(interval);
-                            resendButton.disabled = false;
-                            resendButton.textContent = 'Resend Code';
-                        }
-                    }, 1000);
-                }
+                await auth.currentUser.sendEmailVerification();
+                messageEl.textContent = 'A new verification email has been sent!';
+                resendButton.disabled = true;
+                setTimeout(() => {
+                    resendButton.disabled = false;
+                    messageEl.textContent = '';
+                }, 30000); // Prevent spamming by disabling for 30 seconds
             } catch (error) {
-                console.error('Resend error:', error);
-                errorEl.style.color = 'red';
-                errorEl.textContent = error.message || 'Failed to resend code. Please try again.';
-                resendButton.disabled = false;
-                resendButton.textContent = 'Resend Code';
+                console.error("Error resending verification email:", error);
+                messageEl.style.color = 'red';
+                messageEl.textContent = 'Failed to send email. Please try again in a moment.';
             }
         });
     }
 }
+
 
 // --- FUNCTION TO SETUP SEARCH ---
 function setupSearch(auth, db, storage) {
@@ -603,29 +532,30 @@ function addAuthFormListeners(auth, db) {
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
 
-            const isGsuEmail = email.endsWith('@student.gsu.edu') || email.endsWith('@gsu.edu');
-            if (!isGsuEmail) {
+            // GSU email validation remains the same
+            if (!email.endsWith('@student.gsu.edu') && !email.endsWith('@gsu.edu')) {
                 authErrorElement.textContent = 'Error: Please use a valid GSU email address.';
                 return;
             }
 
-            authErrorElement.textContent = 'Creating account...';
-            
+            authErrorElement.textContent = '';
+
             try {
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 
-                // Create user profile in Firestore (this triggers the email)
+                // ** KEY CHANGE **
+                // Send the verification email directly from the client.
+                await userCredential.user.sendEmailVerification();
+
+                // You can still create a user profile in Firestore
                 await db.collection('users').doc(userCredential.user.uid).set({
                     email: userCredential.user.email,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
                 
-                authErrorElement.style.color = 'green';
-                authErrorElement.textContent = 'Account created! Sending verification code...';
-                
-                // The auth state change listener will handle showing the verification form
+                // The onAuthStateChanged listener will now automatically show the
+                // 'verifyEmailHTML' view for the new, unverified user.
             } catch (error) {
-                authErrorElement.style.color = 'red';
                 authErrorElement.textContent = error.message;
             }
         });
@@ -636,15 +566,12 @@ function addAuthFormListeners(auth, db) {
             e.preventDefault();
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
+            authErrorElement.textContent = '';
 
-            authErrorElement.textContent = 'Signing in...';
-            
             try {
-                const userCredential = await auth.signInWithEmailAndPassword(email, password);
-                await userCredential.user.reload();
-                // Auth state change listener will handle the rest
+                await auth.signInWithEmailAndPassword(email, password);
+                // The onAuthStateChanged listener will handle the redirect.
             } catch (error) {
-                authErrorElement.style.color = 'red';
                 authErrorElement.textContent = error.message;
             }
         });

@@ -1,9 +1,40 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
-const Brevo = require('@getbrevo/brevo');
 
 admin.initializeApp();
+
+// Helper function to send email via Brevo
+async function sendBrevoEmail(apiKey, toEmail, subject, htmlContent) {
+    try {
+        const brevo = require('@getbrevo/brevo');
+        
+        // The package exports everything at the top level
+        const defaultClient = brevo.ApiClient.instance;
+        const apiKeyAuth = defaultClient.authentications['api-key'];
+        apiKeyAuth.apiKey = apiKey;
+        
+        const apiInstance = new brevo.TransactionalEmailsApi();
+        const sendSmtpEmail = new brevo.SendSmtpEmail();
+        
+        sendSmtpEmail.subject = subject;
+        sendSmtpEmail.htmlContent = htmlContent;
+        sendSmtpEmail.sender = { "name": "PantherMarket", "email": "noreply@panthermarket.app" };
+        sendSmtpEmail.to = [{ "email": toEmail }];
+
+        const result = await apiInstance.sendTransacEmail(sendSmtpEmail);
+        console.log(`Email sent successfully to ${toEmail}`);
+        return { success: true };
+    } catch (error) {
+        console.error('Brevo email error details:', {
+            message: error.message,
+            response: error.response?.body,
+            status: error.response?.status,
+            stack: error.stack
+        });
+        throw error;
+    }
+}
 
 // Firestore trigger for sending verification code when user document is created
 exports.sendVerificationCode = onDocumentCreated(
@@ -38,15 +69,7 @@ exports.sendVerificationCode = onDocumentCreated(
         return null;
       }
 
-      const defaultClient = Brevo.ApiClient.instance;
-      const apiKey = defaultClient.authentications['api-key'];
-      apiKey.apiKey = brevoApiKey;
-
-      const apiInstance = new Brevo.TransactionalEmailsApi();
-      const sendSmtpEmail = new Brevo.SendSmtpEmail();
-      
-      sendSmtpEmail.subject = "Your PantherMarket Verification Code";
-      sendSmtpEmail.htmlContent = `
+      const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; padding: 30px 0;">
             <h1 style="color: #0033a0; margin-bottom: 10px;">Welcome to PantherMarket!</h1>
@@ -64,14 +87,11 @@ exports.sendVerificationCode = onDocumentCreated(
           </div>
         </div>
       `;
-      sendSmtpEmail.sender = { "name": "PantherMarket", "email": "noreply@panthermarket.app" };
-      sendSmtpEmail.to = [{ "email": email }];
 
-      await apiInstance.sendTransacEmail(sendSmtpEmail);
-      console.log(`Verification code sent successfully to ${email}`);
+      await sendBrevoEmail(brevoApiKey, email, "Your PantherMarket Verification Code", htmlContent);
       return { success: true };
     } catch (error) {
-      console.error('Error sending Brevo email:', error.response?.body || error.message);
+      console.error('Error in sendVerificationCode:', error.message || error);
       return { success: false, error: error.message };
     }
   }
@@ -125,7 +145,7 @@ exports.verifyEmailCode = onCall(
   }
 );
 
-// Callable function for resending verification code
+// Callable function for resending verification code  
 exports.resendVerificationCode = onCall(
   { 
     secrets: ["BREVO_KEY"],
@@ -170,15 +190,7 @@ exports.resendVerificationCode = onCall(
         throw new HttpsError('internal', 'Email service not configured.');
       }
 
-      const defaultClient = Brevo.ApiClient.instance;
-      const apiKey = defaultClient.authentications['api-key'];
-      apiKey.apiKey = brevoApiKey;
-
-      const apiInstance = new Brevo.TransactionalEmailsApi();
-      const sendSmtpEmail = new Brevo.SendSmtpEmail();
-      
-      sendSmtpEmail.subject = "Your New PantherMarket Verification Code";
-      sendSmtpEmail.htmlContent = `
+      const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="text-align: center; padding: 30px 0;">
             <h1 style="color: #0033a0; margin-bottom: 10px;">New Verification Code</h1>
@@ -193,10 +205,8 @@ exports.resendVerificationCode = onCall(
           </div>
         </div>
       `;
-      sendSmtpEmail.sender = { "name": "PantherMarket", "email": "noreply@panthermarket.app" };
-      sendSmtpEmail.to = [{ "email": email }];
 
-      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      await sendBrevoEmail(brevoApiKey, email, "Your New PantherMarket Verification Code", htmlContent);
       console.log(`New verification code sent to ${email}`);
       return { success: true, message: "New verification code sent! Check your email." };
     } catch (error) {
