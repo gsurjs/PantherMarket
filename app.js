@@ -159,7 +159,12 @@ function setupAuthListener(auth, db, storage) {
             appContent.innerHTML = verifyEmailHTML(user.email); 
             
             document.getElementById('resend-verification-button').addEventListener('click', () => {
-                user.sendEmailVerification().then(() => alert('Verification email sent!'));
+                const actionCodeSettings = {
+                    // Also update it here for resending the email
+                    url: 'https://panthermarket.app',
+                    handleCodeInApp: true
+                };
+                user.sendEmailVerification(actionCodeSettings).then(() => alert('Verification email sent!'));
             });
             document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
         
@@ -528,15 +533,20 @@ function addAuthFormListeners(auth, db) {
                 return;
             }
 
+            const actionCodeSettings = {
+                // send user back to live site
+                url: 'https://panthermarket.app'
+                handleCodeInApp: true
+            }
+
             auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
                     // Send verification email
-                    userCredential.user.sendEmailVerification();
+                    userCredential.user.sendEmailVerification(actionCodeSettings);
                     // Create user profile in Firestore
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: userCredential.user.email,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        emailVerified: false
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 })
                 .then(() => {
