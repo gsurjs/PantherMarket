@@ -350,6 +350,14 @@ function addListingFormListener(auth, db, storage) {
 
     listingForm.addEventListener('submit', (e) => {
         e.preventDefault();
+
+        // -- Security Check for User Verification --
+
+        if (!user || !user.emailVerified) {
+            formError.textContent = "Error: You must have a verified email to create a listing.";
+            return; // Stop the function from proceeding
+        }
+
         const title = document.getElementById('listing-title').value;
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
