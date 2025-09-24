@@ -1,100 +1,207 @@
-// Import necessary modules
-const { onCall } = require("firebase-functions/v2/https");
-const { user } = require("firebase-functions/v1/auth"); // Using v1 trigger for onCreate
-const functions = require("firebase-functions");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const Brevo = require('@getbrevo/brevo');
 
 admin.initializeApp();
 
-/**
- * 1. Generates and sends a 6-digit verification code when a new user signs up.
- */
-exports.sendVerificationCode = user().onCreate(async (user) => {
-  if (!user.email) {
-    console.log(`User ${user.uid} has no email, skipping.`);
-    return;
-  }
+// Firestore trigger for sending verification code when user document is created
+exports.sendVerificationCode = onDocumentCreated(
+  { 
+    document: "users/{userId}", 
+    secrets: ["BREVO_KEY"] 
+  }, 
+  async (event) => {
+    const userId = event.params.userId;
+    const data = event.data.data();
+    const email = data.email;
 
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const expiration = new Date(Date.now() + 15 * 60 * 1000); // 15-minute expiration
-
-  await admin.firestore().collection('verifications').doc(user.uid).set({
-    code: code,
-    email: user.email,
-    expiresAt: expiration
-  });
-
-  // --- CORRECT Brevo API Client Initialization and Sending ---
-  try {
-    const brevoApiKey = functions.config().brevo.key;
-    if (!brevoApiKey) {
-        console.error("FATAL: Brevo API key is not set in function configuration.");
-        return;
+    if (!email) {
+      console.log(`User document ${userId} created without an email, skipping.`);
+      return null;
     }
 
-    // Create an instance of the API class
-    const apiInstance = new Brevo.TransactionalEmailsApi();
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiration = new Date(Date.now() + 15 * 60 * 1000);
 
-    // Authenticate by setting the key on the authentication object
-    const apiKeyAuth = apiInstance.authentications['api-key'];
-    apiKeyAuth.apiKey = brevoApiKey;
+    await admin.firestore().collection('verifications').doc(userId).set({
+      code: code,
+      email: email,
+      expiresAt: expiration,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
 
-    // Create the email payload
-    const sendSmtpEmail = new Brevo.SendSmtpEmail();
-    sendSmtpEmail.subject = "Your PantherMarket Verification Code";
-    sendSmtpEmail.htmlContent = `
-      <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px;">
-        <h1 style="color: #0033a0;">Here is your verification code:</h1>
-        <p style="font-size: 24px; font-weight: bold; letter-spacing: 5px; margin: 20px 0;">${code}</p>
-        <p>This code will expire in 15 minutes. Enter it on the verification page to activate your account.</p>
-      </div>
-    `;
-    sendSmtpEmail.sender = { "name": "PantherMarket", "email": "noreply@panthermarket.app" };
-    sendSmtpEmail.to = [{ "email": user.email }];
+    try {
+      const brevoApiKey = process.env.BREVO_KEY;
+      if (!brevoApiKey) {
+        console.error("FATAL: Brevo API key is not available in the environment.");
+        return null;
+      }
 
-    // Send the email
-    await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log(`Verification code sent to ${user.email} via Brevo.`);
+      const defaultClient = Brevo.ApiClient.instance;
+      const apiKey = defaultClient.authentications['api-key'];
+      apiKey.apiKey = brevoApiKey;
 
-  } catch (error) {
-    // Log the detailed error from Brevo if the API call fails
-    console.error('Error sending Brevo email:', error.body || error.message);
+      const apiInstance = new Brevo.TransactionalEmailsApi();
+      const sendSmtpEmail = new Brevo.SendSmtpEmail();
+      
+      sendSmtpEmail.subject = "Your PantherMarket Verification Code";
+      sendSmtpEmail.htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; padding: 30px 0;">
+            <h1 style="color: #0033a0; margin-bottom: 10px;">Welcome to PantherMarket!</h1>
+            <p style="color: #666; font-size: 16px;">Please verify your GSU email address</p>
+          </div>
+          <div style="background: #f5f5f5; border-radius: 10px; padding: 30px; text-align: center;">
+            <p style="color: #333; font-size: 16px; margin-bottom: 20px;">Your verification code is:</p>
+            <div style="background: white; border: 2px solid #0033a0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #0033a0;">${code}</span>
+            </div>
+            <p style="color: #666; font-size: 14px; margin-top: 20px;">This code will expire in 15 minutes</p>
+          </div>
+          <div style="text-align: center; padding: 20px; color: #999; font-size: 12px;">
+            <p>If you didn't request this code, please ignore this email.</p>
+          </div>
+        </div>
+      `;
+      sendSmtpEmail.sender = { "name": "PantherMarket", "email": "noreply@panthermarket.app" };
+      sendSmtpEmail.to = [{ "email": email }];
+
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log(`Verification code sent successfully to ${email}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending Brevo email:', error.response?.body || error.message);
+      return { success: false, error: error.message };
+    }
   }
-});
+);
 
-/**
- * 2. A callable function that verifies the code submitted by the user.
- * (This function does not need to be changed)
- */
-exports.verifyEmailCode = onCall(async (request) => {
-  const uid = request.auth.uid;
-  const code = request.data.code;
+// Callable function for verifying the code
+exports.verifyEmailCode = onCall(
+  { 
+    secrets: ["BREVO_KEY"],
+    cors: true
+  }, 
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'You must be logged in to verify your email.');
+    }
 
-  if (!uid) {
-    throw new functions.https.HttpsError('unauthenticated', 'You must be logged in.');
+    const uid = request.auth.uid;
+    const code = request.data.code;
+
+    if (!code) {
+      throw new HttpsError('invalid-argument', 'Verification code is required.');
+    }
+
+    const verificationDoc = admin.firestore().collection('verifications').doc(uid);
+    const doc = await verificationDoc.get();
+
+    if (!doc.exists) {
+      throw new HttpsError('not-found', 'No verification code found. Please request a new one.');
+    }
+
+    const { code: correctCode, expiresAt } = doc.data();
+
+    if (expiresAt.toDate() < new Date()) {
+      await verificationDoc.delete();
+      throw new HttpsError('deadline-exceeded', 'This verification code has expired. Please request a new one.');
+    }
+
+    if (code !== correctCode) {
+      throw new HttpsError('invalid-argument', 'Invalid verification code. Please try again.');
+    }
+
+    try {
+      await admin.auth().updateUser(uid, { emailVerified: true });
+      await verificationDoc.delete();
+      console.log(`Email verified successfully for user ${uid}`);
+      return { success: true, message: "Email verified successfully!" };
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw new HttpsError('internal', 'Failed to verify email. Please try again.');
+    }
   }
+);
 
-  const verificationDoc = admin.firestore().collection('verifications').doc(uid);
-  const doc = await verificationDoc.get();
+// Callable function for resending verification code
+exports.resendVerificationCode = onCall(
+  { 
+    secrets: ["BREVO_KEY"],
+    cors: true
+  }, 
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError('unauthenticated', 'You must be logged in.');
+    }
 
-  if (!doc.exists) {
-    throw new functions.https.HttpsError('not-found', 'Invalid code, please try again.');
+    const uid = request.auth.uid;
+    const userDoc = await admin.firestore().collection('users').doc(uid).get();
+    
+    if (!userDoc.exists) {
+      throw new HttpsError('not-found', 'User not found.');
+    }
+
+    const email = userDoc.data().email;
+    
+    const existingVerification = await admin.firestore().collection('verifications').doc(uid).get();
+    if (existingVerification.exists) {
+      const { expiresAt } = existingVerification.data();
+      if (expiresAt.toDate() > new Date()) {
+        const remainingMinutes = Math.ceil((expiresAt.toDate() - new Date()) / 60000);
+        throw new HttpsError('already-exists', `A valid code was already sent. It expires in ${remainingMinutes} minutes.`);
+      }
+    }
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiration = new Date(Date.now() + 15 * 60 * 1000);
+
+    await admin.firestore().collection('verifications').doc(uid).set({
+      code: code,
+      email: email,
+      expiresAt: expiration,
+      createdAt: admin.firestore.FieldValue.serverTimestamp()
+    });
+
+    try {
+      const brevoApiKey = process.env.BREVO_KEY;
+      if (!brevoApiKey) {
+        throw new HttpsError('internal', 'Email service not configured.');
+      }
+
+      const defaultClient = Brevo.ApiClient.instance;
+      const apiKey = defaultClient.authentications['api-key'];
+      apiKey.apiKey = brevoApiKey;
+
+      const apiInstance = new Brevo.TransactionalEmailsApi();
+      const sendSmtpEmail = new Brevo.SendSmtpEmail();
+      
+      sendSmtpEmail.subject = "Your New PantherMarket Verification Code";
+      sendSmtpEmail.htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="text-align: center; padding: 30px 0;">
+            <h1 style="color: #0033a0; margin-bottom: 10px;">New Verification Code</h1>
+            <p style="color: #666; font-size: 16px;">Here's your new verification code</p>
+          </div>
+          <div style="background: #f5f5f5; border-radius: 10px; padding: 30px; text-align: center;">
+            <p style="color: #333; font-size: 16px; margin-bottom: 20px;">Your new verification code is:</p>
+            <div style="background: white; border: 2px solid #0033a0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #0033a0;">${code}</span>
+            </div>
+            <p style="color: #666; font-size: 14px; margin-top: 20px;">This code will expire in 15 minutes</p>
+          </div>
+        </div>
+      `;
+      sendSmtpEmail.sender = { "name": "PantherMarket", "email": "noreply@panthermarket.app" };
+      sendSmtpEmail.to = [{ "email": email }];
+
+      await apiInstance.sendTransacEmail(sendSmtpEmail);
+      console.log(`New verification code sent to ${email}`);
+      return { success: true, message: "New verification code sent! Check your email." };
+    } catch (error) {
+      console.error('Error sending email:', error);
+      throw new HttpsError('internal', 'Failed to send verification code. Please try again.');
+    }
   }
-
-  const { code: correctCode, expiresAt } = doc.data();
-
-  if (expiresAt.toDate() < new Date()) {
-    await verificationDoc.delete();
-    throw new functions.https.HttpsError('deadline-exceeded', 'This code has expired.');
-  }
-
-  if (code !== correctCode) {
-    throw new functions.https.HttpsError('invalid-argument', 'Invalid code, please try again.');
-  }
-
-  await admin.auth().updateUser(uid, { emailVerified: true });
-  await verificationDoc.delete();
-
-  return { success: true, message: "Email verified successfully!" };
-});
+);
