@@ -153,7 +153,6 @@ function setupAuthListener(auth, db, storage) {
         // --- State 2: User is LOGGED IN but NOT VERIFIED ---
         } else if (user && !user.emailVerified) {
             document.getElementById('app-content').style.display = 'block';
-            // CHANGED: Always show the listings
             document.getElementById('listings-section').style.display = 'block';
 
             navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
@@ -167,46 +166,37 @@ function setupAuthListener(auth, db, storage) {
         // --- State 3: User is LOGGED OUT ---
         } else {
             document.getElementById('app-content').style.display = 'block';
-            // CHANGED: Always show the listings
             document.getElementById('listings-section').style.display = 'block';
 
+            // Set the nav links for login and register
             navLinks.innerHTML = `
-                <a href="#" id="login-link">Login</a>
+                <a href="#" id="login-link" class="active-link">Login</a>
                 <a href="#" id="register-link">Register</a>
             `;
 
-            appContent.innerHTML = emailLinkLoginHTML;
+            // Show the login form by default
+            appContent.innerHTML = loginHTML;
 
-            const emailLinkForm = document.getElementById('email-link-form');
-            const authError = document.getElementById('auth-error');
-            const submitButton = emailLinkForm.querySelector('button');
+            // Make the login/register forms and nav links work
+            addAuthFormListeners(auth, db);
 
-            emailLinkForm.addEventListener('submit', (e) => {
+            const loginLink = document.getElementById('login-link');
+            const registerLink = document.getElementById('register-link');
+
+            loginLink.addEventListener('click', (e) => {
                 e.preventDefault();
-                authError.textContent = '';
-                
-                const email = document.getElementById('email-input').value; // Ensure your input ID is correct
+                appContent.innerHTML = loginHTML;
+                addAuthFormListeners(auth, db); // Re-attach listeners to the new form
+                loginLink.classList.add('active-link');
+                registerLink.classList.remove('active-link');
+            });
 
-                const isGsuEmail = email.endsWith('@student.gsu.edu') || email.endsWith('@gsu.edu');
-                if (!isGsuEmail) {
-                    authError.textContent = 'Error: Please use a valid GSU email address.';
-                    return;
-                }
-
-                const sendSignInLink = firebase.functions().httpsCallable('sendSignInLink');
-                
-                submitButton.textContent = 'Sending...';
-                submitButton.disabled = true;
-
-                sendSignInLink({ email: email, redirectUrl: window.location.href })
-                    .then((result) => {
-                        appContent.innerHTML = `<h2>Check Your Email</h2><p>A sign-in link has been sent to <strong>${email}</strong>.</p>`;
-                    })
-                    .catch((error) => {
-                        authError.textContent = 'Could not send sign-in link. Please try again.';
-                        submitButton.textContent = 'Send Sign-In Link';
-                        submitButton.disabled = false;
-                    });
+            registerLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                appContent.innerHTML = registerHTML;
+                addAuthFormListeners(auth, db); // Re-attach listeners to the new form
+                registerLink.classList.add('active-link');
+                loginLink.classList.remove('active-link');
             });
         }
     });
