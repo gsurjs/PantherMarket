@@ -217,26 +217,87 @@ function setupAuthListener(auth, db, storage) {
 function addVerificationFormListener(auth, db, storage) {
     const verifyForm = document.getElementById('verify-code-form');
     const errorEl = document.getElementById('verify-error');
+    const resendButton = document.getElementById('resend-verification-button');
     const functions = firebase.functions();
 
-    verifyForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const code = document.getElementById('code-input').value.trim();
-        if (!code) return;
-
-        try {
-            const verifyEmailCode = functions.httpsCallable('verifyEmailCode');
-            const result = await verifyEmailCode({ code: code });
+    if (verifyForm) {
+        verifyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const codeInput = document.getElementById('code-input');
+            const code = codeInput.value.trim();
             
-            if (result.data.success) {
-                // Success! Reload the user to get the new 'emailVerified' status.
-                // onAuthStateChanged will then automatically show the welcome screen.
-                await auth.currentUser.reload();
+            if (!code || code.length !== 6) {
+                errorEl.textContent = 'Please enter a valid 6-digit code.';
+                return;
             }
-        } catch (error) {
-            errorEl.textContent = error.message;
-        }
-    });
+
+            errorEl.textContent = 'Verifying...';
+            
+            try {
+                const verifyEmailCode = functions.httpsCallable('verifyEmailCode');
+                const result = await verifyEmailCode({ code: code });
+                
+                if (result.data.success) {
+                    errorEl.style.color = 'green';
+                    errorEl.textContent = 'Success! Redirecting...';
+                    
+                    // Force reload the user to get updated emailVerified status
+                    await auth.currentUser.reload();
+                    
+                    // Give feedback before the auth state change happens
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                errorEl.style.color = 'red';
+                errorEl.textContent = error.message || 'Invalid code. Please try again.';
+                
+                // Clear the input for retry
+                codeInput.value = '';
+                codeInput.focus();
+            }
+        });
+    }
+
+    if (resendButton) {
+        resendButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+            resendButton.disabled = true;
+            resendButton.textContent = 'Sending...';
+            errorEl.textContent = '';
+            
+            try {
+                const resendVerificationCode = functions.httpsCallable('resendVerificationCode');
+                const result = await resendVerificationCode();
+                
+                if (result.data.success) {
+                    errorEl.style.color = 'green';
+                    errorEl.textContent = result.data.message;
+                    
+                    // Disable resend button for 60 seconds
+                    let countdown = 60;
+                    const interval = setInterval(() => {
+                        countdown--;
+                        if (countdown > 0) {
+                            resendButton.textContent = `Resend in ${countdown}s`;
+                        } else {
+                            clearInterval(interval);
+                            resendButton.disabled = false;
+                            resendButton.textContent = 'Resend Code';
+                        }
+                    }, 1000);
+                }
+            } catch (error) {
+                console.error('Resend error:', error);
+                errorEl.style.color = 'red';
+                errorEl.textContent = error.message || 'Failed to resend code. Please try again.';
+                resendButton.disabled = false;
+                resendButton.textContent = 'Resend Code';
+            }
+        });
+    }
 }
 
 // --- FUNCTION TO SETUP SEARCH ---
@@ -536,25 +597,8 @@ function addAuthFormListeners(auth, db) {
     const registerForm = document.getElementById('register-form');
     const authErrorElement = document.getElementById('auth-error');
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', e => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-
-            auth.signInWithEmailAndPassword(email, password)
-                .then((userCredential) => {
-                    // Reload user state to get latest verification status
-                    return userCredential.user.reload();
-                })
-                .catch(error => {
-                    authErrorElement.textContent = error.message;
-                });
-        });
-    }
-
     if (registerForm) {
-        registerForm.addEventListener('submit', e => {
+        registerForm.addEventListener('submit', async e => {
             e.preventDefault();
             const email = document.getElementById('register-email').value;
             const password = document.getElementById('register-password').value;
@@ -565,24 +609,44 @@ function addAuthFormListeners(auth, db) {
                 return;
             }
 
-            const actionCodeSettings = {
-                // send user back to live site
-                url: 'https://panthermarket.app',
-                handleCodeInApp: true
-            };
-
-            auth.createUserWithEmailAndPassword(email, password)
-                .then(userCredential => {
-                    // Create user profile in Firestore
-                    return db.collection('users').doc(userCredential.user.uid).set({
-                        email: userCredential.user.email,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-   
-                })
-                .catch(error => {
-                    authErrorElement.textContent = error.message;
+            authErrorElement.textContent = 'Creating account...';
+            
+            try {
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
+                // Create user profile in Firestore (this triggers the email)
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    email: userCredential.user.email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                
+                authErrorElement.style.color = 'green';
+                authErrorElement.textContent = 'Account created! Sending verification code...';
+                
+                // The auth state change listener will handle showing the verification form
+            } catch (error) {
+                authErrorElement.style.color = 'red';
+                authErrorElement.textContent = error.message;
+            }
+        });
+    }
+
+    if (loginForm) {
+        loginForm.addEventListener('submit', async e => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            authErrorElement.textContent = 'Signing in...';
+            
+            try {
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                await userCredential.user.reload();
+                // Auth state change listener will handle the rest
+            } catch (error) {
+                authErrorElement.style.color = 'red';
+                authErrorElement.textContent = error.message;
+            }
         });
     }
 }
