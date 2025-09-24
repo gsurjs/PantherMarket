@@ -541,6 +541,8 @@ function addAuthFormListeners(auth, db) {
 
             auth.createUserWithEmailAndPassword(email, password)
                 .then(userCredential => {
+                    // Send verification email
+                    userCredential.user.sendEmailVerification(actionCodeSettings);
                     // Create user profile in Firestore
                     return db.collection('users').doc(userCredential.user.uid).set({
                         email: userCredential.user.email,
