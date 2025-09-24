@@ -161,7 +161,7 @@ function setupAuthListener(auth, db, storage) {
             document.getElementById('resend-verification-button').addEventListener('click', () => {
                 const actionCodeSettings = {
                     // Also update it here for resending the email
-                    url: 'https://panthermarket.app',
+                    url: 'https://panthermarket.app/verify.html',
                     handleCodeInApp: true
                 };
                 user.sendEmailVerification(actionCodeSettings).then(() => alert('Verification email sent!'));
@@ -548,10 +548,7 @@ function addAuthFormListeners(auth, db) {
                         email: userCredential.user.email,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                })
-                .then(() => {
-                    // Show success message
-                    appContent.innerHTML = registrationSuccessHTML;
+   
                 })
                 .catch(error => {
                     authErrorElement.textContent = error.message;

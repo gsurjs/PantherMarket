@@ -17,7 +17,7 @@ exports.sendSignInLink = onCall({ maxInstances: 10 }, async (request) => {
   const redirectUrl = request.data.redirectUrl;
 
   const actionCodeSettings = {
-    url: redirectUrl,
+    url: 'https://panthermarket.app/verify.html',
     handleCodeInApp: true,
   };
 
