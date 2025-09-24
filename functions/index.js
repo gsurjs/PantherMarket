@@ -1,6 +1,6 @@
 // Import necessary modules
 const { onCall } = require("firebase-functions/v2/https");
-const { user } = require("firebase-functions/v1/auth");
+const { user } = require("firebase-functions/v1/auth"); // Using v1 trigger for onCreate
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const Brevo = require('@getbrevo/brevo');
@@ -27,14 +27,21 @@ exports.sendVerificationCode = user().onCreate(async (user) => {
 
   // --- CORRECT Brevo API Client Initialization and Sending ---
   try {
+    const brevoApiKey = functions.config().brevo.key;
+    if (!brevoApiKey) {
+        console.error("FATAL: Brevo API key is not set in function configuration.");
+        return;
+    }
+
+    // Create an instance of the API class
     const apiInstance = new Brevo.TransactionalEmailsApi();
-    
-    // Authenticate with the API key from your environment variables
-    const apiKey = apiInstance.authentications['api-key'];
-    apiKey.apiKey = functions.config().brevo.key;
 
+    // Authenticate by setting the key on the authentication object
+    const apiKeyAuth = apiInstance.authentications['api-key'];
+    apiKeyAuth.apiKey = brevoApiKey;
+
+    // Create the email payload
     const sendSmtpEmail = new Brevo.SendSmtpEmail();
-
     sendSmtpEmail.subject = "Your PantherMarket Verification Code";
     sendSmtpEmail.htmlContent = `
       <div style="font-family: Arial, sans-serif; text-align: center; color: #333; padding: 20px;">
@@ -46,10 +53,13 @@ exports.sendVerificationCode = user().onCreate(async (user) => {
     sendSmtpEmail.sender = { "name": "PantherMarket", "email": "noreply@panthermarket.app" };
     sendSmtpEmail.to = [{ "email": user.email }];
 
+    // Send the email
     await apiInstance.sendTransacEmail(sendSmtpEmail);
     console.log(`Verification code sent to ${user.email} via Brevo.`);
+
   } catch (error) {
-    console.error('Error sending Brevo email:', error);
+    // Log the detailed error from Brevo if the API call fails
+    console.error('Error sending Brevo email:', error.body || error.message);
   }
 });
 
