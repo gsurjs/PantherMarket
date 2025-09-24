@@ -6,7 +6,6 @@ body {
     padding: 20px;
 }
 
-
 header {
     background-color: #0033a0; /* GSU Blue */
     color: white;
@@ -15,19 +14,26 @@ header {
     margin-bottom: 2rem;
 }
 
+/* --- Layout for the bottom row of the header --- */
+#header-bottom-row {
+    display: flex; /* Use flexbox to align children */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    margin-top: 1rem; /* Space above the row */
+}
 
-/* Adjusted button to align with centered text */
+/* --- ADJUSTED: Theme toggle button styling --- */
 #theme-toggle-btn {
     background: none;
     border: 1px solid white;
     color: white;
-    font-size: 1.2rem; /* Slightly smaller to match text */
+    font-size: 1.2rem;
     padding: 0.2rem 0.6rem;
     border-radius: 50%;
     cursor: pointer;
     line-height: 1;
-    margin-left: 15px;      /* Adds space next to nav links */
-    vertical-align: middle; /* Aligns with text better */
+    margin-left: 15px;      /* Space next to nav links */
+    /* vertical-align is no longer needed due to flexbox */
 }
 
 #theme-toggle-btn:hover {
