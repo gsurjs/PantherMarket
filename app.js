@@ -580,5 +580,39 @@ function addAuthFormListeners(auth, db) {
     }
 }
 
+// --- THEME TOGGLE LOGIC ---
+function setupTheme() {
+    const themeToggleBtn = document.getElementById('theme-toggle-btn');
+    const body = document.body;
+
+    // Function to apply the theme
+    const applyTheme = (theme) => {
+        if (theme === 'dark') {
+            body.classList.add('dark-mode');
+            themeToggleBtn.textContent = '☀️'; // Sun icon
+        } else {
+            body.classList.remove('dark-mode');
+            themeToggleBtn.textContent = '🌙'; // Moon icon
+        }
+    };
+
+    // Check localStorage for a saved theme when the page loads
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+
+    // Add click event listener to the button
+    themeToggleBtn.addEventListener('click', () => {
+        const isDarkMode = body.classList.contains('dark-mode');
+        const newTheme = isDarkMode ? 'light' : 'dark';
+        
+        // Save the new theme to localStorage
+        localStorage.setItem('theme', newTheme);
+        
+        // Apply the new theme to the page
+        applyTheme(newTheme);
+    });
+}
+
 // --- START THE APP ---
 initializeApp();
+setupTheme();
