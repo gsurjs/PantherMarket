@@ -366,7 +366,7 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
             title: updatedTitle,
             description: updatedDesc,
             price: Number(updatedPrice),
-            title_lowercase: updatedTitle.toLowerCase()
+            title_lowercase: updatedTitle.toLowerCase(),
             title_tokens: updatedTitle.toLowerCase().split(/\s+/).filter(Boolean)
         }).then(() => {
             alert('Listing updated successfully!');
