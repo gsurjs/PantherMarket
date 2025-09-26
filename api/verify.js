@@ -1,15 +1,6 @@
 const admin = require('firebase-admin');
 const axios = require('axios');
 
-// Initialize Firebase Admin SDK if it hasn't been already
-if (!admin.apps.length) {
-  const serviceAccountString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8');
-  const serviceAccount = JSON.parse(serviceAccountString);
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
-  });
-}
-
 const db = admin.firestore(); // Get a reference to Firestore
 
 module.exports = async (request, response) => {
@@ -18,6 +9,17 @@ module.exports = async (request, response) => {
   }
 
   try {
+    // --- ROBUST INITIALIZATION ---
+    // Move the initialization check inside the handler's try block.
+    if (!admin.apps.length) {
+      const serviceAccountString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8');
+      const serviceAccount = JSON.parse(serviceAccountString);
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount)
+      });
+    }
+    // --- END INITIALIZATION ---
+
     const { oobCode, recaptchaToken } = request.body;
 
     if (!oobCode || !recaptchaToken) {
@@ -25,7 +27,7 @@ module.exports = async (request, response) => {
     }
 
     // 1. Verify the reCAPTCHA token with Google
-    const recaptchaSecret = process.env.VITE_RECAPTCHA_SECRET_KEY;
+    const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY;
     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
 
     const recaptchaResponse = await axios.post(verificationUrl);
@@ -47,6 +49,7 @@ module.exports = async (request, response) => {
     return response.status(200).send({ message: "Email verified successfully!" });
 
   } catch (error) {
+    // This will now also catch any errors during initialization
     console.error("Verification process failed:", error);
     if (error.code === "auth/invalid-action-code") {
       return response.status(400).send({ error: "This link is invalid or has already been used." });
