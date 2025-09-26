@@ -4,6 +4,16 @@ const appContent = document.getElementById('app-content');
 const listingsGrid = document.getElementById('listings-grid');
 
 // --- HTML TEMPLATES ---
+const mainListingsSectionHTML = `
+    <h2>Listings</h2>
+    <form id="search-form">
+        <input type="text" id="search-input" placeholder="Search for items...">
+        <button type="submit">Search</button>
+    </form>
+    <div id="listings-grid">
+        </div>
+`;
+
 const loginHTML = `
     <h2>Login</h2>
     <form id="login-form">
@@ -162,6 +172,7 @@ function setupAuthListener(auth, db, storage) {
                 document.getElementById('app-content').style.display = 'block';
                 document.getElementById('listings-section').style.display = 'block';
                 
+                // UPDATED NAVIGATION
                 navLinks.innerHTML = `
                     <a href="#" id="home-link">Home</a>
                     <a href="#" id="my-listings-link">My Listings</a>
@@ -169,6 +180,7 @@ function setupAuthListener(auth, db, storage) {
                 `;
                 appContent.innerHTML = welcomeHTML(user);
 
+                // --- ADD EVENT LISTENERS FOR NAV LINKS & BUTTONS ---
                 document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
                 
                 document.getElementById('create-listing-btn').addEventListener('click', () => {
@@ -178,14 +190,23 @@ function setupAuthListener(auth, db, storage) {
 
                 document.getElementById('home-link').addEventListener('click', (e) => {
                     e.preventDefault();
-                    // Show the main welcome screen and all listings
+                    const listingsSection = document.getElementById('listings-section');
+
+                    // 1. Restore the top part of the UI
                     document.getElementById('app-content').style.display = 'block';
-                    document.getElementById('listings-section').style.display = 'block';
                     appContent.innerHTML = welcomeHTML(user);
                     document.getElementById('create-listing-btn').addEventListener('click', () => {
                          appContent.innerHTML = createListingHTML;
                          addListingFormListener(auth, db, storage);
                     });
+
+                    // 2. Restore the original structure of the entire listings section
+                    listingsSection.innerHTML = mainListingsSectionHTML;
+
+                    // 3. Re-initialize the search functionality since we just recreated the form
+                    setupSearch(auth, db, storage);
+
+                    // 4. Now, load all the listings into the restored, empty grid
                     loadAllListings(auth, db, storage);
                 });
 
