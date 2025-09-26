@@ -417,6 +417,7 @@ function showItemDetails(auth, db, storage, listingId) {
             const currentUser = auth.currentUser;
             const isOwner = currentUser && currentUser.uid === listingData.sellerId;
 
+            document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'none';
             appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
 
@@ -440,7 +441,7 @@ function showItemDetails(auth, db, storage, listingId) {
                 document.getElementById('delete-listing-btn').addEventListener('click', () => {
                     if (confirm('Are you sure you want to delete this listing?')) {
                         const imageRef = storage.refFromURL(listingData.imageUrl);
-                        // Gracefully handle image deletion errors
+                        // handle image deletion errors
                         imageRef.delete().catch(err => console.warn("Image deletion warning:", err));
                         
                         db.collection('listings').doc(listingId).delete().then(() => {
