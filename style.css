@@ -126,7 +126,7 @@ main {
 #listings-section h2 {
     font-size: 1.8rem;
     margin-bottom: 1.5rem;
-    color: #003087;
+    color: #333; /* UPDATED from dark blue to black/dark gray */
     border-bottom: 2px solid #f0f0f0;
     padding-bottom: 0.5rem;
 }
@@ -175,6 +175,13 @@ form {
     gap: 1rem;
 }
 
+/* NEW class for centering login/register forms */
+.auth-form {
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
 form label {
     display: block;
     margin-bottom: 0.5rem;
@@ -211,11 +218,12 @@ form textarea {
     resize: vertical;
 }
 
+/* UPDATED rule to center the search form */
 #search-form {
     display: flex;
     gap: 1rem;
-    margin-bottom: 2rem;
     max-width: 600px;
+    margin: 0 auto 2rem auto;
 }
 
 #search-input {
@@ -258,7 +266,7 @@ form textarea {
 .listing-card-info h3 {
     font-size: 1.2rem;
     margin: 0 0 0.5rem 0;
-    color: #003087;
+    color: #333; /* UPDATED from dark blue */
 }
 
 .listing-card-info p {
@@ -272,7 +280,7 @@ form textarea {
     width: 100%;
     padding: 0.5rem;
     background: #f8f9fa;
-    color: #003087;
+    color: #333; /* UPDATED from dark blue */
     border: 1px solid #dee2e6;
     border-radius: 6px;
     font-weight: 500;
@@ -302,7 +310,7 @@ form textarea {
 .item-details .price {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #003087;
+    color: #333; /* UPDATED from dark blue */
 }
 
 .item-details .seller {
@@ -395,7 +403,8 @@ body.dark-mode .view-details-btn:hover {
 
 body.dark-mode h1,
 body.dark-mode h2,
-body.dark-mode h3 {
+body.dark-mode h3,
+body.dark-mode .item-details .price { /* Ensured these are white in dark mode */
     color: #ffffff;
 }
 
