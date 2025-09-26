@@ -1,22 +1,20 @@
-const { initializeApp, cert, getApps } = require('firebase-admin/app'); // "getApps" has been added here.
-const { getAuth } = require('firebase-admin/auth');
-const { getFirestore } = require('firebase-admin/firestore');
+const admin = require('firebase-admin');
 const axios = require('axios');
 
-// This function checks if an app is already initialized
-function getFirebaseApp() {
-  const apps = getApps();
-  if (apps.length > 0) {
-    return apps[0];
-  }
-
+// Initialize the app ONCE, outside the handler. This is a standard and efficient pattern.
+// It checks if the app is already initialized to avoid errors on "warm" function invocations.
+if (!admin.apps.length) {
   const serviceAccountString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8');
   const serviceAccount = JSON.parse(serviceAccountString);
 
-  return initializeApp({
-    credential: cert(serviceAccount)
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
   });
 }
+
+// Now we can safely get references to the services.
+const auth = admin.auth();
+const db = admin.firestore();
 
 module.exports = async (request, response) => {
   if (request.method !== 'POST') {
@@ -24,10 +22,6 @@ module.exports = async (request, response) => {
   }
 
   try {
-    const app = getFirebaseApp();
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
     const { oobCode, recaptchaToken } = request.body;
 
     if (!oobCode || !recaptchaToken) {
@@ -35,7 +29,7 @@ module.exports = async (request, response) => {
     }
 
     // 1. Verify the reCAPTCHA token with Google
-    const recaptchaSecret = process.env.VITE_RECAPTCHA_SECRET_KEY;
+    const recaptchaSecret = process.env.VITE_RECAPTCHA_SECRET_KEY; // Using the name from your screenshot
     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
 
     const recaptchaResponse = await axios.post(verificationUrl);
