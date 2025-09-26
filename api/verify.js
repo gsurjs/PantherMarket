@@ -1,8 +1,6 @@
 const admin = require('firebase-admin');
 const axios = require('axios');
 
-const db = admin.firestore(); // Get a reference to Firestore
-
 module.exports = async (request, response) => {
   if (request.method !== 'POST') {
     return response.status(405).send({ error: 'Method Not Allowed' });
@@ -19,6 +17,8 @@ module.exports = async (request, response) => {
       });
     }
     // --- END INITIALIZATION ---
+
+    const db = admin.firestore();
 
     const { oobCode, recaptchaToken } = request.body;
 
