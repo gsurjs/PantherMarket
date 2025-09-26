@@ -3,7 +3,8 @@ const axios = require('axios');
 
 // Initialize Firebase Admin SDK if it hasn't been already
 if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  const serviceAccountString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8');
+  const serviceAccount = JSON.parse(serviceAccountString);
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
