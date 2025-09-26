@@ -11,7 +11,7 @@ body {
     line-height: 1.6;
     background: #f5f5f5;
     color: #333;
-    padding: 20px 0 0 0; /* Adjusted padding */
+    padding: 20px 0 0 0;
 }
 
 /* --- Header --- */
@@ -122,14 +122,27 @@ main {
     margin-bottom: 2rem;
 }
 
+/* UPDATED H2 styles for cohesion */
 #app-content h2,
 #listings-section h2 {
     font-size: 1.8rem;
-    margin-bottom: 1.5rem;
-    color: #333; /* UPDATED from dark blue to black/dark gray */
-    border-bottom: 2px solid #f0f0f0;
-    padding-bottom: 0.5rem;
+    color: #333;
+    text-align: center;
+    margin-bottom: 2rem;
+    position: relative;
 }
+
+/* NEW rule for cleaner title underline */
+#app-content h2::after,
+#listings-section h2::after {
+    content: '';
+    display: block;
+    width: 100px;
+    height: 2px;
+    background: #f0f0f0;
+    margin: 0.75rem auto 0 auto;
+}
+
 
 /* --- Buttons --- */
 button, .button {
@@ -175,7 +188,6 @@ form {
     gap: 1rem;
 }
 
-/* NEW class for centering login/register forms */
 .auth-form {
     max-width: 500px;
     margin-left: auto;
@@ -218,7 +230,6 @@ form textarea {
     resize: vertical;
 }
 
-/* UPDATED rule to center the search form */
 #search-form {
     display: flex;
     gap: 1rem;
@@ -266,7 +277,7 @@ form textarea {
 .listing-card-info h3 {
     font-size: 1.2rem;
     margin: 0 0 0.5rem 0;
-    color: #333; /* UPDATED from dark blue */
+    color: #333;
 }
 
 .listing-card-info p {
@@ -280,7 +291,7 @@ form textarea {
     width: 100%;
     padding: 0.5rem;
     background: #f8f9fa;
-    color: #333; /* UPDATED from dark blue */
+    color: #333;
     border: 1px solid #dee2e6;
     border-radius: 6px;
     font-weight: 500;
@@ -291,8 +302,8 @@ form textarea {
 .view-details-btn:hover {
     background: #003087;
     color: white;
-    transform: none; /* Override general button hover */
-    box-shadow: none; /* Override general button hover */
+    transform: none;
+    box-shadow: none;
 }
 
 /* --- Item Details View --- */
@@ -310,7 +321,7 @@ form textarea {
 .item-details .price {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #333; /* UPDATED from dark blue */
+    color: #333;
 }
 
 .item-details .seller {
@@ -401,15 +412,19 @@ body.dark-mode .view-details-btn:hover {
     color: white;
 }
 
+/* UPDATED specific dark mode text color rules */
 body.dark-mode h1,
-body.dark-mode h2,
-body.dark-mode h3,
-body.dark-mode .item-details .price { /* Ensured these are white in dark mode */
+body.dark-mode #app-content h2,
+body.dark-mode #listings-section h2,
+body.dark-mode .listing-card-info h3,
+body.dark-mode .item-details .price {
     color: #ffffff;
 }
 
-body.dark-mode h2 {
-    border-bottom-color: #3a3a3a;
+/* NEW rule for title underline in dark mode */
+body.dark-mode #app-content h2::after,
+body.dark-mode #listings-section h2::after {
+    background: #3a3a3a;
 }
 
 body.dark-mode #nav-links a,
@@ -429,8 +444,6 @@ body.dark-mode #theme-toggle-btn {
 }
 
 /* --- Media Queries for Responsiveness --- */
-
-/* Mobile & Tablet (<= 768px) */
 @media (max-width: 768px) {
     body {
         padding: 0;
@@ -479,7 +492,7 @@ body.dark-mode #theme-toggle-btn {
     #nav-links a:hover,
     #nav-links button:hover {
         background: rgba(255, 255, 255, 0.2);
-        transform: none; /* Disable hover effect on mobile */
+        transform: none;
         box-shadow: none;
     }
 
@@ -522,7 +535,6 @@ body.dark-mode #theme-toggle-btn {
     }
 }
 
-/* Small Screens (<= 400px) */
 @media (max-width: 400px) {
     header h1 {
         font-size: 1.5rem;
