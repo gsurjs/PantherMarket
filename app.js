@@ -595,6 +595,12 @@ function addCardEventListeners(auth, db, storage) {
             const card = e.target.closest('.listing-card');
             const listingId = card.dataset.id;
 
+            // first check if user is lgoged out
+            if (!currentUser) {
+                alert('You must be logged-in and verified to view details.');
+                return; // Stop the function here
+            }
+
             // Use our robust, dual-flag verification check
             const userDocRef = db.collection('users').doc(currentUser.uid);
             const userDoc = await userDocRef.get({ source: 'server' });
