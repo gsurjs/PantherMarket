@@ -562,6 +562,9 @@ function addAuthFormListeners(auth, db) {
             try {
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
 
+                // manually triggers init verification email upon registration
+                await userCredential.user.sendEmailVerification();
+
                 // You can still create a user profile in Firestore
                 await db.collection('users').doc(userCredential.user.uid).set({
                     email: userCredential.user.email,
