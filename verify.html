@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Email - PantherMarket</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 <body>
     <header>
@@ -13,10 +14,14 @@
     </header>
     <main>
         <div id="verification-content">
-            <h2>Confirm Your Email Address</h2>
-            <p>Please click the button below to finalize your email verification.</p>
-            <button id="confirm-verification-btn" style="width: 100%; margin-top: 1rem;">Confirm My Email</button>
+            <h2>Confirm You're Human</h2>
+            <p>Please complete the check below to finalize your email verification.</p>
+
+            <div class="g-recaptcha" data-callback="onRecaptchaSuccess" style="margin: 1.5rem auto; display: inline-block;"></div>
+
+            <button id="confirm-verification-btn" disabled>Confirm My Email</button>
             <p id="error-message" class="error"></p>
+
         </div>
     </main>
 
@@ -25,65 +30,78 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
     <script>
-        async function setupVerificationPage() {
-            const verificationContent = document.getElementById('verification-content');
-            const confirmButton = document.getElementById('confirm-verification-btn');
-            const errorMessage = document.getElementById('error-message');
-            
-            const auth = firebase.auth();
-            // Initialize Firestore
-            const db = firebase.firestore();
-            
+        const confirmButton = document.getElementById('confirm-verification-btn');
+        const errorMessage = document.getElementById('error-message');
+        const verificationContent = document.getElementById('verification-content');
+        const recaptchaContainer = document.querySelector('.g-recaptcha');
+        let recaptchaToken = null;
+
+        // This function is called by reCAPTCHA when the user solves it
+        function onRecaptchaSuccess(token) {
+            recaptchaToken = token;
+            confirmButton.disabled = false; // Enable the button
+        }
+        
+        // This function calls our secure API endpoint
+        async function verifyWithApi(oobCode) {
+            confirmButton.disabled = true;
+            confirmButton.textContent = 'Verifying...';
+            errorMessage.textContent = '';
+
+            try {
+                const response = await fetch('/api/verify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ oobCode, recaptchaToken }),
+                });
+
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Verification failed.');
+
+                verificationContent.innerHTML = `
+                    <h2>Email Verified!</h2>
+                    <p>Thank you! Your email has been successfully verified.</p>
+                    <a href="/" style="text-decoration: none;"><button>Go to PantherMarket</button></a>
+                `;
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                confirmButton.disabled = false;
+                confirmButton.textContent = 'Confirm My Email';
+                grecaptcha.reset(); // Reset CAPTCHA on failure
+            }
+        }
+        
+        function setupVerificationPage(siteKey) {
+            // Dynamically set the site key on the reCAPTCHA element
+            recaptchaContainer.setAttribute('data-sitekey', siteKey);
+
             const urlParams = new URLSearchParams(window.location.search);
             const actionCode = urlParams.get('oobCode');
-
             if (!actionCode) {
                 verificationContent.innerHTML = '<h2>Error</h2><p>Invalid verification link.</p>';
                 return;
             }
 
-            confirmButton.addEventListener('click', async () => {
-                confirmButton.disabled = true;
-                confirmButton.textContent = 'Verifying...';
-
-                try {
-                    // Step 1: Apply the action code (same as before)
-                    await auth.applyActionCode(actionCode);
-                    
-                    // -- SET OUR CUSTOM FLAG IN FIRESTORE --
-                    const user = auth.currentUser;
-                    if (user) {
-                        const userDocRef = db.collection('users').doc(user.uid);
-                        await userDocRef.update({ isManuallyVerified: true });
-
-                        // Success! Show the final success message.
-                        verificationContent.innerHTML = `
-                            <h2>Email Verified!</h2>
-                            <p>Thank you! Your account is fully activated.</p>
-                            <a href="/" style="text-decoration: none;"><button>Go to PantherMarket</button></a>
-                        `;
-                    } else {
-                       throw new Error("You must be logged in to verify an email.");
-                    }
-                } catch (error) {
-                    console.error('Verification failed:', error);
-                    errorMessage.textContent = 'This link is invalid or has been used. Please request a new one.';
-                    confirmButton.disabled = false;
-                    confirmButton.textContent = 'Confirm My Email';
-                }
+            confirmButton.addEventListener('click', () => {
+                if (recaptchaToken) verifyWithApi(actionCode);
             });
         }
 
-        // Standard Firebase Initialization
+        // Initialize the page by fetching the config
         async function initialize() {
             try {
                 const response = await fetch('/api/config');
-                const firebaseConfig = await response.json();
+                const config = await response.json();
+
+                // Separate the Firebase config from the reCAPTCHA key
+                const { recaptchaSiteKey, ...firebaseConfig } = config;
+
                 firebase.initializeApp(firebaseConfig);
-                setupVerificationPage();
+                setupVerificationPage(recaptchaSiteKey);
+
             } catch (error) {
-                console.error('Failed to initialize Firebase:', error);
-                document.getElementById('verification-content').innerHTML = '<h2>Error</h2><p>Could not connect to the server.</p>';
+                console.error("Initialization Error:", error);
+                verificationContent.innerHTML = '<h2>Error</h2><p>Could not load application configuration.</p>';
             }
         }
 

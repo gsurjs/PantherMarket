@@ -6,5 +6,6 @@ export default function handler(req, res) {
     storageBucket: process.env.VITE_FIREBASE_STORAGE_BUCKET,
     messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.VITE_FIREBASE_APP_ID,
+    recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY,
   });
 }
