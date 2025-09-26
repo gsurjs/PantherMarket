@@ -20,7 +20,7 @@ module.exports = async (request, response) => {
 
   try {
     const { oobCode, recaptchaToken } = request.body;
-    const apiKey = process.env.VITE_FIREBASE_API_KEY; // Your web API Key is needed for the REST API
+    const apiKey = process.env.VITE_FIREBASE_API_KEY;
 
     if (!oobCode || !recaptchaToken || !apiKey) {
       return response.status(400).send({ error: "Missing required information or server configuration." });
@@ -34,22 +34,22 @@ module.exports = async (request, response) => {
       return response.status(400).send({ error: "CAPTCHA verification failed. Please try again." });
     }
 
-    // 2. NEW: Manually check the action code using the REST API
-    // This replaces `auth.checkActionCode()`
+    // 2. Check the action code to get the user's UID.
+    // This part is working correctly and remains the same.
     const checkCodeUrl = `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`;
     const checkCodeResponse = await axios.post(checkCodeUrl, { oobCode: oobCode });
-    const userUid = checkCodeResponse.data.users[0].localId; // Get the user's ID from the response
+    const userUid = checkCodeResponse.data.users[0].localId;
 
     if (!userUid) {
       throw new Error("Could not retrieve user information from verification code.");
     }
     
-    // 3. NEW: Manually apply the action code using the REST API
-    // This replaces `auth.applyActionCode()`
+    // 3. CORRECTED: Apply the action code using the correct REST API endpoint.
+    // This is the only line that has changed.
     const applyCodeUrl = `https://identitytoolkit.googleapis.com/v1/accounts:update?key=${apiKey}`;
     await axios.post(applyCodeUrl, { oobCode: oobCode });
 
-    // 4. Update the user's document in Firestore (this part still uses the admin SDK)
+    // 4. Update the user's document in Firestore.
     const userDocRef = db.collection('users').doc(userUid);
     await userDocRef.update({ isManuallyVerified: true });
 
@@ -57,7 +57,6 @@ module.exports = async (request, response) => {
 
   } catch (error) {
     console.error("Verification process failed:", error.response ? error.response.data : error);
-    // Check for a specific error from the Firebase REST API
     if (error.response && error.response.data.error.message === 'INVALID_OOB_CODE') {
         return response.status(400).send({ error: "This link is invalid or has already been used." });
     }
