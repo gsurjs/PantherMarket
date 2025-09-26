@@ -387,22 +387,35 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
 }
 
 
-// --- FUNCTION TO ADD LISTING FORM LISTENER ---
+// --- FUNCTION TO ADD LISTING FORM LISTENER (UPDATED WITH NEW SECURITY CHECK) ---
 function addListingFormListener(auth, db, storage) {
     const listingForm = document.getElementById('create-listing-form');
     const formError = document.getElementById('form-error');
     const user = auth.currentUser;
 
-    listingForm.addEventListener('submit', (e) => {
+    listingForm.addEventListener('submit', async (e) => { // Make the event listener async
         e.preventDefault();
 
-        // -- Security Check for User Verification --
+        // -- NEW, ROBUST SECURITY CHECK --
+        // check for the custom Firestore flag here as well.
+        if (!user) return; // Should not happen, but a safeguard edge case
 
-        if (!user || !user.emailVerified) {
-            formError.textContent = "Error: You must have a verified email to create a listing.";
-            return; // Stop the function from proceeding
+        try {
+            const userDocRef = db.collection('users').doc(user.uid);
+            const userDoc = await userDocRef.get({ source: 'server' });
+            const isFullyVerified = user.emailVerified && userDoc.exists && userDoc.data().isManuallyVerified;
+
+            if (!isFullyVerified) {
+                formError.textContent = "Error: You must be a fully verified user to create a listing.";
+                return; // Stop the function if not fully verified
+            }
+        } catch (error) {
+            console.error("Verification check failed:", error);
+            formError.textContent = "Error: Could not confirm user verification status.";
+            return;
         }
 
+        // --- If the check passes, the rest of the function proceeds as normal ---
         const title = document.getElementById('listing-title').value;
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
@@ -431,7 +444,7 @@ function addListingFormListener(auth, db, storage) {
                     db.collection("listings").add({
                         title: title,
                         title_lowercase: title.toLowerCase(),
-                        title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean), // Splits by space and removes empty strings
+                        title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean),
                         description: description,
                         price: Number(price),
                         imageUrl: downloadURL,
@@ -440,12 +453,14 @@ function addListingFormListener(auth, db, storage) {
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     }).then(() => {
                         alert('Listing created successfully!');
-                        appContent.innerHTML = welcomeHTML(user); // Go back to welcome screen
+                        // Go back to welcome screen
+                        appContent.innerHTML = welcomeHTML(user); 
                         document.getElementById('create-listing-btn').addEventListener('click', () => {
                             appContent.innerHTML = createListingHTML;
                             addListingFormListener(auth, db, storage);
-                        	loadAllListings(auth, db, storage); // Refresh listings on the page
                         });
+                        // Refresh listings on the main page
+                        loadAllListings(auth, db, storage); 
                     }).catch(error => {
                         console.error("Error adding document: ", error);
                         formError.textContent = "Failed to save listing.";
@@ -464,7 +479,6 @@ function addListingFormListener(auth, db, storage) {
         });
     });
 }
-
 // --FUNCTION FOR FETCHING SPECIFIC LISTING DATA FROM FIRESTORE TO DISPLAY--
 function addCardEventListeners(auth, db, storage) {
     const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
