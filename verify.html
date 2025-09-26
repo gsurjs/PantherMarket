@@ -14,7 +14,7 @@
     <main>
         <div id="verification-content">
             <h2>Confirm Your Email Address</h2>
-            <p>Thank you for registering. Please click the button below to finalize your email verification.</p>
+            <p>Please click the button below to finalize your email verification.</p>
             <button id="confirm-verification-btn" style="width: 100%; margin-top: 1rem;">Confirm My Email</button>
             <p id="error-message" class="error"></p>
         </div>
@@ -22,63 +22,68 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
 
     <script>
-        // --- This script now handles the TWO-STEP verification ---
         async function setupVerificationPage() {
             const verificationContent = document.getElementById('verification-content');
             const confirmButton = document.getElementById('confirm-verification-btn');
             const errorMessage = document.getElementById('error-message');
             
             const auth = firebase.auth();
+            // Initialize Firestore
+            const db = firebase.firestore();
             
-            // 1. Get the action code from the URL
             const urlParams = new URLSearchParams(window.location.search);
             const actionCode = urlParams.get('oobCode');
 
             if (!actionCode) {
-                verificationContent.innerHTML = '<h2>Error</h2><p>Invalid verification link. Please request a new one from the login screen.</p>';
+                verificationContent.innerHTML = '<h2>Error</h2><p>Invalid verification link.</p>';
                 return;
             }
 
-            // 2. Add a click listener to the button. The verification only happens AFTER the click.
             confirmButton.addEventListener('click', async () => {
                 confirmButton.disabled = true;
                 confirmButton.textContent = 'Verifying...';
-                errorMessage.textContent = '';
 
                 try {
-                    // 3. APPLY the action code to verify the email
+                    // Step 1: Apply the action code (same as before)
                     await auth.applyActionCode(actionCode);
                     
-                    // Success! Show the success message.
-                    verificationContent.innerHTML = `
-                        <h2>Email Verified!</h2>
-                        <p>Thank you! Your email has been successfully verified. You can now access all features of PantherMarket.</p>
-                        <a href="/" style="text-decoration: none;"><button>Go to PantherMarket</button></a>
-                    `;
+                    // -- SET OUR CUSTOM FLAG IN FIRESTORE --
+                    const user = auth.currentUser;
+                    if (user) {
+                        const userDocRef = db.collection('users').doc(user.uid);
+                        await userDocRef.update({ isManuallyVerified: true });
+
+                        // Success! Show the final success message.
+                        verificationContent.innerHTML = `
+                            <h2>Email Verified!</h2>
+                            <p>Thank you! Your account is fully activated.</p>
+                            <a href="/" style="text-decoration: none;"><button>Go to PantherMarket</button></a>
+                        `;
+                    } else {
+                       throw new Error("You must be logged in to verify an email.");
+                    }
                 } catch (error) {
-                    console.error('Email verification failed:', error);
-                    // Show a specific error message if the link was already used
-                    errorMessage.textContent = 'This verification link is invalid or has already been used. Please request a new one.';
+                    console.error('Verification failed:', error);
+                    errorMessage.textContent = 'This link is invalid or has been used. Please request a new one.';
                     confirmButton.disabled = false;
                     confirmButton.textContent = 'Confirm My Email';
                 }
             });
         }
 
-        // --- Standard Firebase Initialization ---
+        // Standard Firebase Initialization
         async function initialize() {
             try {
                 const response = await fetch('/api/config');
                 const firebaseConfig = await response.json();
                 firebase.initializeApp(firebaseConfig);
-                
-                // Now that Firebase is ready, set up the page logic
                 setupVerificationPage();
             } catch (error) {
                 console.error('Failed to initialize Firebase:', error);
-                document.getElementById('verification-content').innerHTML = '<h2>Error</h2><p>Could not connect to the server. Please try again later.</p>';
+                document.getElementById('verification-content').innerHTML = '<h2>Error</h2><p>Could not connect to the server.</p>';
             }
         }
 

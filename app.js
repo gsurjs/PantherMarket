@@ -138,39 +138,45 @@ async function initializeApp() {
 function setupAuthListener(auth, db, storage) {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Reload user data to get the latest emailVerified status
+            // Reload the Auth user state
             await user.reload();
-        }
-
-        // --- State 1: User is LOGGED IN and VERIFIED ---
-        if (user && user.emailVerified) {
-            document.getElementById('app-content').style.display = 'block';
-            document.getElementById('listings-section').style.display = 'block';
             
-            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            appContent.innerHTML = welcomeHTML(user);
+            // Fetch our custom user profile from Firestore
+            const userDocRef = db.collection('users').doc(user.uid);
+            const userDoc = await userDocRef.get();
+            const userProfile = userDoc.exists ? userDoc.data() : null;
 
-            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-            document.getElementById('create-listing-btn').addEventListener('click', () => {
-                appContent.innerHTML = createListingHTML;
-                addListingFormListener(auth, db, storage);
-            });
+            // --- THE NEW VERIFICATION CHECK ---
+            // A user is only truly verified if BOTH flags are true.
+            const isFullyVerified = user.emailVerified && userProfile?.isManuallyVerified;
+
+            if (isFullyVerified) {
+                // --- State 1: User is LOGGED IN and FULLY VERIFIED ---
+                document.getElementById('app-content').style.display = 'block';
+                document.getElementById('listings-section').style.display = 'block';
+                
+                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+                appContent.innerHTML = welcomeHTML(user);
+
+                document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+                document.getElementById('create-listing-btn').addEventListener('click', () => {
+                    appContent.innerHTML = createListingHTML;
+                    addListingFormListener(auth, db, storage);
+                });
+            } else {
+                // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
+                document.getElementById('app-content').style.display = 'block';
+                document.getElementById('listings-section').style.display = 'none';
+
+                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+                appContent.innerHTML = verifyEmailHTML(user.email);
+                addResendListener(auth);
+
+                document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+            }
         
-        // --- State 2: User is LOGGED IN but NOT VERIFIED ---
-        } else if (user && !user.emailVerified) {
-            document.getElementById('app-content').style.display = 'block';
-            // Hide listings for unverified users
-            document.getElementById('listings-section').style.display = 'none';
-
-            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            // UPDATED: Show the "check your email" message instead of the code form.
-            appContent.innerHTML = verifyEmailHTML(user.email);
-            addResendListener(auth); // Add listener for the resend button.
-
-            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-        
-        // --- State 3: User is LOGGED OUT ---
         } else {
+            // --- State 3: User is LOGGED OUT ---
             document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'block';
 
@@ -559,7 +565,8 @@ function addAuthFormListeners(auth, db) {
                 // You can still create a user profile in Firestore
                 await db.collection('users').doc(userCredential.user.uid).set({
                     email: userCredential.user.email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isManuallyVerified: false
                 });
                 
                 // The onAuthStateChanged listener will now automatically show the
