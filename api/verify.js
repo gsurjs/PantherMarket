@@ -1,12 +1,13 @@
-const { initializeApp, cert } = require('firebase-admin/app');
+const { initializeApp, cert, getApps } = require('firebase-admin/app'); // "getApps" has been added here.
 const { getAuth } = require('firebase-admin/auth');
 const { getFirestore } = require('firebase-admin/firestore');
 const axios = require('axios');
 
 // This function checks if an app is already initialized
 function getFirebaseApp() {
-  if (initializeApp.length > 0 && getApps()[0]) {
-    return getApps()[0];
+  const apps = getApps();
+  if (apps.length > 0) {
+    return apps[0];
   }
 
   const serviceAccountString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8');
