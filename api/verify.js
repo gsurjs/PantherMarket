@@ -27,7 +27,7 @@ module.exports = async (request, response) => {
     }
 
     // 1. Verify the reCAPTCHA token with Google
-    const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY;
+    const recaptchaSecret = process.env.VITE_RECAPTCHA_SECRET_KEY;
     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
 
     const recaptchaResponse = await axios.post(verificationUrl);
