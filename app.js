@@ -138,41 +138,45 @@ async function initializeApp() {
 function setupAuthListener(auth, db, storage) {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Reload user data to get the latest emailVerified status
+            // Reload the Auth user state
             await user.reload();
-
-            await user.getIdToken(true); 
-        }
-
-        // --- State 1: User is LOGGED IN and VERIFIED ---
-        if (user && user.emailVerified) {
-            document.getElementById('app-content').style.display = 'block';
-            document.getElementById('listings-section').style.display = 'block';
             
-            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            appContent.innerHTML = welcomeHTML(user);
+            // Fetch our custom user profile from Firestore
+            const userDocRef = db.collection('users').doc(user.uid);
+            const userDoc = await userDocRef.get();
+            const userProfile = userDoc.exists ? userDoc.data() : null;
 
-            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-            document.getElementById('create-listing-btn').addEventListener('click', () => {
-                appContent.innerHTML = createListingHTML;
-                addListingFormListener(auth, db, storage);
-            });
+            // --- THE NEW VERIFICATION CHECK ---
+            // A user is only truly verified if BOTH flags are true.
+            const isFullyVerified = user.emailVerified && userProfile?.isManuallyVerified;
+
+            if (isFullyVerified) {
+                // --- State 1: User is LOGGED IN and FULLY VERIFIED ---
+                document.getElementById('app-content').style.display = 'block';
+                document.getElementById('listings-section').style.display = 'block';
+                
+                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+                appContent.innerHTML = welcomeHTML(user);
+
+                document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+                document.getElementById('create-listing-btn').addEventListener('click', () => {
+                    appContent.innerHTML = createListingHTML;
+                    addListingFormListener(auth, db, storage);
+                });
+            } else {
+                // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
+                document.getElementById('app-content').style.display = 'block';
+                document.getElementById('listings-section').style.display = 'none';
+
+                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+                appContent.innerHTML = verifyEmailHTML(user.email);
+                addResendListener(auth);
+
+                document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+            }
         
-        // --- State 2: User is LOGGED IN but NOT VERIFIED ---
-        } else if (user && !user.emailVerified) {
-            document.getElementById('app-content').style.display = 'block';
-            // Hide listings for unverified users
-            document.getElementById('listings-section').style.display = 'none';
-
-            navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-            // UPDATED: Show the "check your email" message instead of the code form.
-            appContent.innerHTML = verifyEmailHTML(user.email);
-            addResendListener(auth); // Add listener for the resend button.
-
-            document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-        
-        // --- State 3: User is LOGGED OUT ---
         } else {
+            // --- State 3: User is LOGGED OUT ---
             document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'block';
 
@@ -230,22 +234,38 @@ function addResendListener(auth) {
     }
 }
 
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
 
 // --- FUNCTION TO SETUP SEARCH ---
 function setupSearch(auth, db, storage) {
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');
 
+    const debouncedSearch = debounce((searchTerm) => {
+        loadAllListings(auth, db, storage, searchTerm);
+    }, 500); // 500ms delay after user stops typing
+
     searchForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const searchTerm = searchInput.value.trim();
+        const searchTerm = searchInput.value.trim().toLowerCase();
         loadAllListings(auth, db, storage, searchTerm);
     });
 
     // Reload all listings when the search bar is cleared by the user
     searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.trim().toLowerCase();
         if (e.target.value.trim() === '') {
             loadAllListings(auth, db, storage); // Load all listings without a filter
+        } else {
+            debouncedSearch(searchTerm); // Perform search as user types
         }
     });
 }
@@ -256,13 +276,8 @@ function loadAllListings(auth, db, storage, searchTerm = '') {
     const listingsCollection = db.collection("listings");
 
     if (searchTerm) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        // Query for titles that start with the search term (case-insensitive).
-        // Firestore requires ordering by the same field you are filtering on with a range.
-        // This means search results will be alphabetical, not by creation date.
-        query = listingsCollection.orderBy("title_lowercase")
-                                  .startAt(lowerCaseSearchTerm)
-                                  .endAt(lowerCaseSearchTerm + '\uf8ff');
+        // This is highly efficient and finds any listing with the search term as a whole word.
+        query = listingsCollection.where("title_tokens", "array-contains", searchTerm.toLowerCase());
     } else {
         // Default query: get all listings, ordered by most recent
         query = listingsCollection.orderBy("createdAt", "desc");
@@ -271,7 +286,7 @@ function loadAllListings(auth, db, storage, searchTerm = '') {
     query.onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
         if (querySnapshot.empty) {
-            listingsGrid.innerHTML = '<p>No listings found.</p>';
+            listingsGrid.innerHTML = '<p>No listings found for your search.</p>';
         } else {
             querySnapshot.forEach((doc) => {
                 listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
@@ -355,7 +370,8 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
             title: updatedTitle,
             description: updatedDesc,
             price: Number(updatedPrice),
-            title_lowercase: updatedTitle.toLowerCase()
+            title_lowercase: updatedTitle.toLowerCase(),
+            title_tokens: updatedTitle.toLowerCase().split(/\s+/).filter(Boolean)
         }).then(() => {
             alert('Listing updated successfully!');
             showItemDetails(auth, db, storage, listingId);
@@ -415,6 +431,7 @@ function addListingFormListener(auth, db, storage) {
                     db.collection("listings").add({
                         title: title,
                         title_lowercase: title.toLowerCase(),
+                        title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean), // Splits by space and removes empty strings
                         description: description,
                         price: Number(price),
                         imageUrl: downloadURL,
@@ -544,15 +561,15 @@ function addAuthFormListeners(auth, db) {
 
             try {
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                
-                // ** KEY CHANGE **
-                // Send the verification email directly from the client.
+
+                // manually triggers init verification email upon registration
                 await userCredential.user.sendEmailVerification();
 
                 // You can still create a user profile in Firestore
                 await db.collection('users').doc(userCredential.user.uid).set({
                     email: userCredential.user.email,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isManuallyVerified: false
                 });
                 
                 // The onAuthStateChanged listener will now automatically show the
