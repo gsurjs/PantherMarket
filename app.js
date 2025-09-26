@@ -357,38 +357,40 @@ async function renderMyListings(auth, db, storage) {
     const user = auth.currentUser;
     if (!user) return; // Exit if no user is logged in
 
-    // Hide the main app content and listings section to show our new view
+    // Hide the main app content to show our new view
     document.getElementById('app-content').style.display = 'none';
-    document.getElementById('listings-section').style.display = 'block'; // Keep the section container
-    listingsGrid.innerHTML = ''; // Clear the main grid
-
-    // Inject our "My Listings" page structure
-    document.getElementById('listings-section').innerHTML = myListingsHTML;
+    
+    // Use the main listings section for this view
+    const listingsSection = document.getElementById('listings-section');
+    listingsSection.style.display = 'block';
+    listingsSection.innerHTML = myListingsHTML; // Set the page structure
+    
     const myGrid = document.getElementById('my-listings-grid');
 
-    try {
-        // Query Firestore for listings where sellerId matches the current user's ID
-        const querySnapshot = await db.collection('listings')
-            .where('sellerId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
-            .get();
+    // Use onSnapshot for a real-time listener
+    db.collection('listings')
+        .where('sellerId', '==', user.uid)
+        .orderBy('createdAt', 'desc')
+        .onSnapshot((querySnapshot) => {
+            // Clear the grid on each update
+            myGrid.innerHTML = '';
+            
+            if (querySnapshot.empty) {
+                myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+                return;
+            }
 
-        if (querySnapshot.empty) {
-            myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
-            return;
-        }
+            querySnapshot.forEach(doc => {
+                myGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
+            });
 
-        querySnapshot.forEach(doc => {
-            myGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
+            // Re-attach event listeners to the new cards
+            addCardEventListeners(auth, db, storage);
+
+        }, (error) => {
+            console.error("Error fetching user's listings:", error);
+            myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
         });
-
-        // Re-attach event listeners to the new cards
-        addCardEventListeners(auth, db, storage);
-
-    } catch (error) {
-        console.error("Error fetching user's listings:", error);
-        myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
-    }
 }
 
 
