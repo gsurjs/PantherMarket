@@ -230,22 +230,38 @@ function addResendListener(auth) {
     }
 }
 
+function debounce(func, delay) {
+    let timeout;
+    return function(...args) {
+        const context = this;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(context, args), delay);
+    };
+}
+
 
 // --- FUNCTION TO SETUP SEARCH ---
 function setupSearch(auth, db, storage) {
     const searchForm = document.getElementById('search-form');
     const searchInput = document.getElementById('search-input');
 
+    const debouncedSearch = debounce((searchTerm) => {
+        loadAllListings(auth, db, storage, searchTerm);
+    }, 500); // 500ms delay after user stops typing
+
     searchForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        const searchTerm = searchInput.value.trim();
+        const searchTerm = searchInput.value.trim().toLowerCase();
         loadAllListings(auth, db, storage, searchTerm);
     });
 
     // Reload all listings when the search bar is cleared by the user
     searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.trim().toLowerCase();
         if (e.target.value.trim() === '') {
             loadAllListings(auth, db, storage); // Load all listings without a filter
+        } else {
+            debouncedSearch(searchTerm); // Perform search as user types
         }
     });
 }
@@ -256,13 +272,8 @@ function loadAllListings(auth, db, storage, searchTerm = '') {
     const listingsCollection = db.collection("listings");
 
     if (searchTerm) {
-        const lowerCaseSearchTerm = searchTerm.toLowerCase();
-        // Query for titles that start with the search term (case-insensitive).
-        // Firestore requires ordering by the same field you are filtering on with a range.
-        // This means search results will be alphabetical, not by creation date.
-        query = listingsCollection.orderBy("title_lowercase")
-                                  .startAt(lowerCaseSearchTerm)
-                                  .endAt(lowerCaseSearchTerm + '\uf8ff');
+        // This is highly efficient and finds any listing with the search term as a whole word.
+        query = listingsCollection.where("title_tokens", "array-contains", searchTerm.toLowerCase());
     } else {
         // Default query: get all listings, ordered by most recent
         query = listingsCollection.orderBy("createdAt", "desc");
@@ -271,7 +282,7 @@ function loadAllListings(auth, db, storage, searchTerm = '') {
     query.onSnapshot((querySnapshot) => {
         listingsGrid.innerHTML = ''; // Clear existing listings
         if (querySnapshot.empty) {
-            listingsGrid.innerHTML = '<p>No listings found.</p>';
+            listingsGrid.innerHTML = '<p>No listings found for your search.</p>';
         } else {
             querySnapshot.forEach((doc) => {
                 listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
@@ -356,6 +367,7 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
             description: updatedDesc,
             price: Number(updatedPrice),
             title_lowercase: updatedTitle.toLowerCase()
+            title_tokens: updatedTitle.toLowerCase().split(/\s+/).filter(Boolean)
         }).then(() => {
             alert('Listing updated successfully!');
             showItemDetails(auth, db, storage, listingId);
@@ -415,6 +427,7 @@ function addListingFormListener(auth, db, storage) {
                     db.collection("listings").add({
                         title: title,
                         title_lowercase: title.toLowerCase(),
+                        title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean), // Splits by space and removes empty strings
                         description: description,
                         price: Number(price),
                         imageUrl: downloadURL,
