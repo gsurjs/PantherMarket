@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Email - PantherMarket</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
 </head>
 <body>
     <header>
@@ -18,6 +18,8 @@
             <p>Please complete the check below to finalize your email verification.</p>
             
             <div class="g-recaptcha" data-callback="onRecaptchaSuccess" style="margin: 1.5rem auto; display: inline-block;"></div>
+            
+            <div id="recaptcha-container" class="g-recaptcha" style="margin: 1.5rem auto; display: inline-block;"></div>
 
             <button id="confirm-verification-btn" disabled>Confirm My Email</button>
             <p id="error-message" class="error"></p>
@@ -26,35 +28,40 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
 
-    <script>
+<script>
         const confirmButton = document.getElementById('confirm-verification-btn');
         const errorMessage = document.getElementById('error-message');
         const verificationContent = document.getElementById('verification-content');
-        const recaptchaContainer = document.querySelector('.g-recaptcha');
         let recaptchaToken = null;
 
-        // This function is automatically called by Google's script when the user solves the CAPTCHA
+        // This function is now called by Google's script when it's ready
+        function onRecaptchaLoad() {
+            // We'll render the widget manually once we have the site key
+            if (window.siteKey) {
+                renderRecaptcha();
+            }
+        }
+
+        // This function will be called by the reCAPTCHA widget when solved
         function onRecaptchaSuccess(token) {
             recaptchaToken = token;
-            confirmButton.disabled = false; // Enable the confirmation button
+            confirmButton.disabled = false;
         }
         
-        // This function sends the data to your secure backend
+        // This function calls our secure API endpoint
         async function verifyWithApi(oobCode) {
+            // ... (This function remains the same as before)
             confirmButton.disabled = true;
             confirmButton.textContent = 'Verifying...';
             errorMessage.textContent = '';
-
             try {
                 const response = await fetch('/api/verify', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ oobCode, recaptchaToken }),
                 });
-
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'Verification failed.');
-
                 verificationContent.innerHTML = `
                     <h2>Email Verified!</h2>
                     <p>Thank you! Your email has been successfully verified.</p>
@@ -64,36 +71,44 @@
                 errorMessage.textContent = error.message;
                 confirmButton.disabled = false;
                 confirmButton.textContent = 'Confirm My Email';
-                grecaptcha.reset(); // Reset the CAPTCHA if the verification fails
+                grecaptcha.reset();
             }
         }
         
-        // This function sets up the page
-        function setupVerificationPage(siteKey) {
-            // This line is crucial: it sets the site key on the reCAPTCHA div
-            recaptchaContainer.setAttribute('data-sitekey', siteKey);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            const actionCode = urlParams.get('oobCode');
-            if (!actionCode) {
-                verificationContent.innerHTML = '<h2>Error</h2><p>Invalid verification link.</p>';
-                return;
-            }
-
-            confirmButton.addEventListener('click', () => {
-                if (recaptchaToken) verifyWithApi(actionCode);
+        // NEW function to explicitly render the widget
+        function renderRecaptcha() {
+             grecaptcha.render('recaptcha-container', {
+                'sitekey': window.siteKey,
+                'callback': onRecaptchaSuccess
             });
         }
 
-        // This function starts the whole process
+        // The main initialization function
         async function initialize() {
             try {
                 const response = await fetch('/api/config');
                 const config = await response.json();
-                const { recaptchaSiteKey, ...firebaseConfig } = config; // Neatly separates the keys
+                const { recaptchaSiteKey, ...firebaseConfig } = config;
                 
+                window.siteKey = recaptchaSiteKey; // Store the key globally
+
                 firebase.initializeApp(firebaseConfig);
-                setupVerificationPage(recaptchaSiteKey);
+
+                // If reCAPTCHA script is already loaded, render it.
+                // Otherwise, onRecaptchaLoad() will handle it.
+                if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+                    renderRecaptcha();
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                const actionCode = urlParams.get('oobCode');
+                if (!actionCode) {
+                    verificationContent.innerHTML = '<h2>Error</h2><p>Invalid verification link.</p>';
+                    return;
+                }
+                confirmButton.addEventListener('click', () => {
+                    if (recaptchaToken) verifyWithApi(actionCode);
+                });
 
             } catch (error) {
                 console.error("Initialization Error:", error);
