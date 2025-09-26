@@ -56,6 +56,7 @@ header h3 {
     align-items: center;
 }
 
+/* UPDATED rule to normalize button and link appearance */
 #nav-links a,
 #nav-links button {
     padding: 0.5rem 1.25rem;
@@ -68,6 +69,8 @@ header h3 {
     transition: all 0.3s ease;
     cursor: pointer;
     font-size: 0.95rem;
+    font-family: inherit; /* NEW: Ensures button uses the same font */
+    line-height: 1;       /* NEW: Ensures consistent vertical alignment */
 }
 
 #nav-links a:hover,
@@ -122,7 +125,6 @@ main {
     margin-bottom: 2rem;
 }
 
-/* UPDATED H2 styles for cohesion */
 #app-content h2,
 #listings-section h2 {
     font-size: 1.8rem;
@@ -132,7 +134,6 @@ main {
     position: relative;
 }
 
-/* NEW rule for cleaner title underline */
 #app-content h2::after,
 #listings-section h2::after {
     content: '';
@@ -412,7 +413,6 @@ body.dark-mode .view-details-btn:hover {
     color: white;
 }
 
-/* UPDATED specific dark mode text color rules */
 body.dark-mode h1,
 body.dark-mode #app-content h2,
 body.dark-mode #listings-section h2,
@@ -421,7 +421,6 @@ body.dark-mode .item-details .price {
     color: #ffffff;
 }
 
-/* NEW rule for title underline in dark mode */
 body.dark-mode #app-content h2::after,
 body.dark-mode #listings-section h2::after {
     background: #3a3a3a;
