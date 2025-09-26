@@ -4,6 +4,16 @@ const appContent = document.getElementById('app-content');
 const listingsGrid = document.getElementById('listings-grid');
 
 // --- HTML TEMPLATES ---
+const mainListingsSectionHTML = `
+    <h2>Listings</h2>
+    <form id="search-form">
+        <input type="text" id="search-input" placeholder="Search for items...">
+        <button type="submit">Search</button>
+    </form>
+    <div id="listings-grid">
+        </div>
+`;
+
 const loginHTML = `
     <h2>Login</h2>
     <form id="login-form">
@@ -107,6 +117,13 @@ const accessDeniedHTML = `
     <p>Please log in or register to continue.</p>
 `;
 
+const myListingsHTML = `
+    <h2>My Listings</h2>
+    <p>Here are all the items you currently have for sale.</p>
+    <div id="my-listings-grid" class="listings-grid">
+        </div>
+`;
+
 
 // --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
@@ -143,10 +160,9 @@ function setupAuthListener(auth, db, storage) {
             
             // Fetch our custom user profile from Firestore
             const userDocRef = db.collection('users').doc(user.uid);
-            const userDoc = await userDocRef.get();
+            const userDoc = await userDocRef.get({ source: 'server' });
             const userProfile = userDoc.exists ? userDoc.data() : null;
 
-            // --- THE NEW VERIFICATION CHECK ---
             // A user is only truly verified if BOTH flags are true.
             const isFullyVerified = user.emailVerified && userProfile?.isManuallyVerified;
 
@@ -154,15 +170,60 @@ function setupAuthListener(auth, db, storage) {
                 // --- State 1: User is LOGGED IN and FULLY VERIFIED ---
                 document.getElementById('app-content').style.display = 'block';
                 document.getElementById('listings-section').style.display = 'block';
-                
-                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-                appContent.innerHTML = welcomeHTML(user);
 
-                document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
-                document.getElementById('create-listing-btn').addEventListener('click', () => {
-                    appContent.innerHTML = createListingHTML;
-                    addListingFormListener(auth, db, storage);
+                navLinks.innerHTML = `
+                    <a href="#" id="home-link">Home</a>
+                    <a href="#" id="my-listings-link">My Listings</a>
+                    <button id="logout-button">Logout</button>
+                `;
+
+                // --- ADD EVENT LISTENERS FOR NAV LINKS & BUTTONS ---
+                document.getElementById('logout-button').addEventListener('click', () => {
+                    sessionStorage.clear(); // Clear the saved state on logout
+                    auth.signOut();
                 });
+
+                document.getElementById('home-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    sessionStorage.setItem('currentView', 'home'); // Save the state
+                    const listingsSection = document.getElementById('listings-section');
+                    document.getElementById('app-content').style.display = 'block';
+                    appContent.innerHTML = welcomeHTML(user);
+                    document.getElementById('create-listing-btn').addEventListener('click', () => {
+                         appContent.innerHTML = createListingHTML;
+                         addListingFormListener(auth, db, storage);
+                    });
+                    listingsSection.innerHTML = mainListingsSectionHTML;
+                    setupSearch(auth, db, storage);
+                    loadAllListings(auth, db, storage);
+                });
+
+                document.getElementById('my-listings-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    sessionStorage.setItem('currentView', 'myListings'); // Save the state
+                    renderMyListings(auth, db, storage);
+                });
+
+                // --- ROUTING LOGIC: RESTORE VIEW ON PAGE LOAD/REFRESH ---
+                const savedView = sessionStorage.getItem('currentView');
+                if (savedView === 'myListings') {
+                    renderMyListings(auth, db, storage);
+                } else if (savedView === 'itemDetails') {
+                    const savedItemId = sessionStorage.getItem('currentItemId');
+                    if (savedItemId) {
+                        showItemDetails(auth, db, storage, savedItemId);
+                    } else {
+                        // Default to home if ID is missing
+                        document.getElementById('home-link').click();
+                    }
+                } else {
+                    // Default to the home view
+                    appContent.innerHTML = welcomeHTML(user);
+                    document.getElementById('create-listing-btn').addEventListener('click', () => {
+                        appContent.innerHTML = createListingHTML;
+                        addListingFormListener(auth, db, storage);
+                    });
+                }
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
                 document.getElementById('app-content').style.display = 'block';
@@ -272,58 +333,105 @@ function setupSearch(auth, db, storage) {
 
 // --- FUNCTION TO LOAD ALL LISTINGS ---
 function loadAllListings(auth, db, storage, searchTerm = '') {
+    // Find the grid element here, not globally.
+    // This prevents the "stale reference" bug after navigating away and coming back.
+    const currentListingsGrid = document.getElementById('listings-grid');
+    if (!currentListingsGrid) return; // Safeguard if the grid isn't on the page
+
     let query;
     const listingsCollection = db.collection("listings");
 
     if (searchTerm) {
-        // This is highly efficient and finds any listing with the search term as a whole word.
         query = listingsCollection.where("title_tokens", "array-contains", searchTerm.toLowerCase());
     } else {
-        // Default query: get all listings, ordered by most recent
         query = listingsCollection.orderBy("createdAt", "desc");
     }
 
     query.onSnapshot((querySnapshot) => {
-        listingsGrid.innerHTML = ''; // Clear existing listings
+        currentListingsGrid.innerHTML = ''; // Clear existing listings
         if (querySnapshot.empty) {
-            listingsGrid.innerHTML = '<p>No listings found for your search.</p>';
+            currentListingsGrid.innerHTML = '<p>No listings found.</p>';
         } else {
             querySnapshot.forEach((doc) => {
-                listingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
+                currentListingsGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
             });
         }
-        // after all cards are on page, add listeners to their respective buttons
         addCardEventListeners(auth, db, storage);
     }, (error) => {
         console.error("Error fetching listings:", error);
-        listingsGrid.innerHTML = '<p class="error">Could not load listings.</p>';
+        currentListingsGrid.innerHTML = '<p class="error">Could not load listings.</p>';
     });
 }
 
+
+// --- FUNCTION TO RENDER ONLY THE CURRENT USER'S LISTINGS ---
+async function renderMyListings(auth, db, storage) {
+    const user = auth.currentUser;
+    if (!user) return; // Exit if no user is logged in
+
+    // Hide the main app content to show our new view
+    document.getElementById('app-content').style.display = 'none';
+    
+    // Use the main listings section for this view
+    const listingsSection = document.getElementById('listings-section');
+    listingsSection.style.display = 'block';
+    listingsSection.innerHTML = myListingsHTML; // Set the page structure
+    
+    const myGrid = document.getElementById('my-listings-grid');
+
+    // Use onSnapshot for a real-time listener
+    db.collection('listings')
+        .where('sellerId', '==', user.uid)
+        .orderBy('createdAt', 'desc')
+        .onSnapshot((querySnapshot) => {
+            // Clear the grid on each update
+            myGrid.innerHTML = '';
+            
+            if (querySnapshot.empty) {
+                myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+                return;
+            }
+
+            querySnapshot.forEach(doc => {
+                myGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
+            });
+
+            // Re-attach event listeners to the new cards
+            addCardEventListeners(auth, db, storage);
+
+        }, (error) => {
+            console.error("Error fetching user's listings:", error);
+            myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
+        });
+}
+
+
 // reusable function that renders the details page AND attaches all button listeners.
 function showItemDetails(auth, db, storage, listingId) {
-    db.collection('listings').doc(listingId).get().then(doc => {
+    sessionStorage.setItem('currentView', 'itemDetails');
+    sessionStorage.setItem('currentItemId', listingId);
+
+    db.collection('listings').doc(listingId).get({ source: 'server' }).then(doc => {
         if (doc.exists) {
             const listingData = doc.data();
             const currentUser = auth.currentUser;
             const isOwner = currentUser && currentUser.uid === listingData.sellerId;
 
-            // Show the details view
+            document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'none';
             appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
 
-            // --- Attach Listeners ---
-            // Listener for the "Back" button
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
-                document.getElementById('listings-section').style.display = 'block';
-                appContent.innerHTML = welcomeHTML(currentUser);
-                document.getElementById('create-listing-btn').addEventListener('click', () => {
-                   appContent.innerHTML = createListingHTML;
-                   addListingFormListener(auth, db, storage);
-                });
+                const previousView = sessionStorage.getItem('previousView');
+                if (previousView === 'myListings') {
+                    // If we came from "My Listings", go back there
+                    document.getElementById('my-listings-link').click();
+                } else {
+                    // Otherwise, go back to the Home page
+                    document.getElementById('home-link').click();
+                }
             });
-
-            // If the user is the owner, add listeners for Edit and Delete buttons
+            
             if (isOwner) {
                 document.getElementById('edit-listing-btn').addEventListener('click', () => {
                     appContent.innerHTML = editListingHTML(listingData);
@@ -333,24 +441,23 @@ function showItemDetails(auth, db, storage, listingId) {
                 document.getElementById('delete-listing-btn').addEventListener('click', () => {
                     if (confirm('Are you sure you want to delete this listing?')) {
                         const imageRef = storage.refFromURL(listingData.imageUrl);
-                        imageRef.delete().then(() => {
-                            db.collection('listings').doc(listingId).delete().then(() => {
-                                alert('Listing deleted successfully.');
-                                document.getElementById('listings-section').style.display = 'block';
-                                appContent.innerHTML = welcomeHTML(currentUser);
-                                 document.getElementById('create-listing-btn').addEventListener('click', () => {
-                                    appContent.innerHTML = createListingHTML;
-                                    addListingFormListener(auth, db, storage);
-                                });
-                            });
-                        });
+                        // handle image deletion errors
+                        imageRef.delete().catch(err => console.warn("Image deletion warning:", err));
+                        
+                        db.collection('listings').doc(listingId).delete().then(() => {
+                            alert('Listing deleted successfully.');
+                            document.getElementById('home-link').click(); // Go home after deleting
+                        }).catch(err => console.error("Error deleting document:", err));
                     }
                 });
             }
         } else {
-            console.error("No such document!");
             alert("This listing may have been deleted.");
+            document.getElementById('home-link').click();
         }
+    }).catch(error => {
+        console.error("Error fetching item details:", error);
+        alert("Could not load listing details.");
     });
 }
 
@@ -483,70 +590,32 @@ function addListingFormListener(auth, db, storage) {
 function addCardEventListeners(auth, db, storage) {
     const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
     viewDetailsButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
+        button.addEventListener('click', async (e) => { // Make async
             const currentUser = auth.currentUser;
-            
-            // Security Check: User must be logged in AND verified to view details.
-            if (currentUser && currentUser.emailVerified) {
-                const card = e.target.closest('.listing-card');
-                const listingId = card.dataset.id;
+            const card = e.target.closest('.listing-card');
+            const listingId = card.dataset.id;
 
-                db.collection('listings').doc(listingId).get().then(doc => {
-                    if (doc.exists) {
-                        const listingData = doc.data();
-                        const isOwner = currentUser.uid === listingData.sellerId;
+            // first check if user is lgoged out
+            if (!currentUser) {
+                alert('You must be logged-in and verified to view details.');
+                return; // Stop the function here
+            }
 
-                        // Show the item details page
-                        document.getElementById('listings-section').style.display = 'none';
-                        appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
+            // Use our robust, dual-flag verification check
+            const userDocRef = db.collection('users').doc(currentUser.uid);
+            const userDoc = await userDocRef.get({ source: 'server' });
+            const isFullyVerified = currentUser.emailVerified && userDoc.exists && userDoc.data().isManuallyVerified;
 
-                        // Make the "Back to Listings" button work
-                        document.getElementById('back-to-listings-btn').addEventListener('click', () => {
-                            document.getElementById('listings-section').style.display = 'block';
-                            // Show the welcome screen again for the logged-in user
-                            appContent.innerHTML = welcomeHTML(currentUser);
-                            // Re-attach the listener for the "Create Listing" button
-                            document.getElementById('create-listing-btn').addEventListener('click', () => {
-                               appContent.innerHTML = createListingHTML;
-                               addListingFormListener(auth, db, storage);
-                            });
-                        });
-                        
-                        // If the user owns the listing, make the Edit/Delete buttons work
-                        if (isOwner) {
-                            document.getElementById('delete-listing-btn').addEventListener('click', () => {
-                                if (confirm('Are you sure you want to delete this listing?')) {
-                                    const imageRef = storage.refFromURL(listingData.imageUrl);
-                                    imageRef.delete().then(() => {
-                                        db.collection('listings').doc(listingId).delete().then(() => {
-                                            alert('Listing deleted successfully.');
-                                            document.getElementById('listings-section').style.display = 'block';
-                                            appContent.innerHTML = welcomeHTML(currentUser);
-                                            document.getElementById('create-listing-btn').addEventListener('click', () => {
-                                                appContent.innerHTML = createListingHTML;
-                                                addListingFormListener(auth, db, storage);
-                                            });
-                                        }).catch(error => console.error("Error deleting document: ", error));
-                                    }).catch(error => console.error("Error deleting image: ", error));
-                                }
-                            });
+            if (currentUser && isFullyVerified) {
+                // NEW: Save the previous view so the "Back" button knows where to go
+                const currentView = sessionStorage.getItem('currentView') || 'home';
+                sessionStorage.setItem('previousView', currentView);
 
-                            document.getElementById('edit-listing-btn').addEventListener('click', () => {
-                                appContent.innerHTML = editListingHTML(listingData);
-                                addEditFormListener(auth, db, storage, listingId, doc);
-                            });
-                        }
-                    } else {
-                        console.error("Error: No such document!");
-                        alert("Sorry, this listing could not be found.");
-                    }
-                }).catch(error => {
-                    console.error("Error getting document:", error);
-                });
-
+                // This function should ONLY call showItemDetails.
+                // All the duplicate code that was here has been removed.
+                showItemDetails(auth, db, storage, listingId);
             } else {
-                // If user is logged out or not verified, show the access denied pop up instead
-                alert('You must be logged-in and verified to view details.\n\nPlease log in or register.');
+                alert('You must be logged-in and verified to view details.');
             }
         });
     });
