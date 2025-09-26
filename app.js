@@ -140,8 +140,6 @@ function setupAuthListener(auth, db, storage) {
         if (user) {
             // Reload user data to get the latest emailVerified status
             await user.reload();
-
-            await user.getIdToken(true); 
         }
 
         // --- State 1: User is LOGGED IN and VERIFIED ---
