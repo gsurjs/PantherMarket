@@ -26,21 +26,20 @@ export default async function handler(request, response) {
     // 1. Verify the reCAPTCHA token with Google
     const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY;
     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
-    
+
     const recaptchaResponse = await axios.post(verificationUrl);
     if (!recaptchaResponse.data.success) {
       return response.status(400).send({ error: "CAPTCHA verification failed. Please try again." });
     }
 
-    // 2. Get user info from the action code BEFORE applying it
+    // 2. Get user UID from the action code BEFORE applying it
     const info = await admin.auth().checkActionCode(oobCode);
     const userUid = info.data.uid;
 
-    // 3. Apply the email verification code
+    // 3. Apply the email verification code in Firebase Auth
     await admin.auth().applyActionCode(oobCode);
 
-
-    //  Update the user's document in Firestore to set the custom flag.
+    // 4. Update the user's document in Firestore to set our custom flag
     const userDocRef = db.collection('users').doc(userUid);
     await userDocRef.update({ isManuallyVerified: true });
 
