@@ -223,3 +223,181 @@ body.dark-mode h2,
 body.dark-mode h3 {
     color: #ffffff;
 }
+
+/* Mobile-specific header improvements */
+@media (max-width: 768px) {
+    header {
+        padding: 1rem 0.5rem;
+        position: relative;
+    }
+    
+    header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    header h3 {
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+    
+    /* Restructure the bottom row for mobile */
+    #header-bottom-row {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: center;
+        width: 100%;
+    }
+    
+    /* Navigation links container */
+    #nav-links {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0;
+    }
+    
+    /* Style navigation links for mobile */
+    #nav-links a,
+    #nav-links button {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.9rem;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        transition: background 0.2s;
+        white-space: nowrap;
+    }
+    
+    #nav-links a:hover,
+    #nav-links button:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Theme toggle button positioning */
+    #theme-toggle-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 1.2rem;
+        padding: 0.3rem;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        width: 2.5rem;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+    
+    #theme-toggle-btn:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    
+    /* Adjust main content spacing */
+    main {
+        padding: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* Dark mode adjustments for mobile */
+    body.dark-mode #nav-links a,
+    body.dark-mode #nav-links button {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    body.dark-mode #nav-links a:hover,
+    body.dark-mode #nav-links button:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    body.dark-mode #theme-toggle-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+    }
+}
+
+/* For very small screens, make navigation even more compact */
+@media (max-width: 400px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+    
+    header h3 {
+        font-size: 0.8rem;
+    }
+    
+    #nav-links a,
+    #nav-links button {
+        padding: 0.35rem 0.7rem;
+        font-size: 0.85rem;
+    }
+    
+    #theme-toggle-btn {
+        width: 2.2rem;
+        height: 2.2rem;
+        font-size: 1rem;
+    }
+}
+
+/* Optional: Add hamburger menu for mobile navigation */
+@media (max-width: 768px) {
+    /* implement a hamburger menu later */
+    .mobile-menu-toggle {
+        display: none; /* Hidden by default, enable if needed */
+        background: none;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        font-size: 1.5rem;
+        padding: 0.3rem 0.5rem;
+        cursor: pointer;
+    }
+}
+
+/* Improve search form on mobile */
+@media (max-width: 768px) {
+    #search-form {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    #search-input {
+        width: 100%;
+        padding: 0.7rem;
+        font-size: 1rem;
+    }
+    
+    #search-form button {
+        width: 100%;
+        padding: 0.7rem;
+        font-size: 1rem;
+    }
+}
+
+/* Improve listing cards on mobile */
+@media (max-width: 768px) {
+    #listings-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0.75rem;
+    }
+    
+    .listing-card {
+        font-size: 0.9rem;
+    }
+    
+    .listing-card h3 {
+        font-size: 1rem;
+    }
+}
