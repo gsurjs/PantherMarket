@@ -1,0 +1,25 @@
+{
+  "name": "panthermarket",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gsurjs/PantherMarket.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/gsurjs/PantherMarket/issues"
+  },
+  "homepage": "https://github.com/gsurjs/PantherMarket#readme",
+  "dependencies": {
+    "axios": "^1.12.2",
+    "firebase-admin": "^13.5.0"
+  }
+}

@@ -1,5 +1,6 @@
 functions/node_modules/
 npm-debug.log
+node_modules/
 
 # Firebase
 # Ignore Firebase emulator data, logs, and project-specific aliases
