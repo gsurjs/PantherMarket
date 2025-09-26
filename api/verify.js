@@ -1,5 +1,21 @@
-const admin = require('firebase-admin');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getAuth } = require('firebase-admin/auth');
+const { getFirestore } = require('firebase-admin/firestore');
 const axios = require('axios');
+
+// This function checks if an app is already initialized
+function getFirebaseApp() {
+  if (initializeApp.length > 0 && getApps()[0]) {
+    return getApps()[0];
+  }
+
+  const serviceAccountString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8');
+  const serviceAccount = JSON.parse(serviceAccountString);
+
+  return initializeApp({
+    credential: cert(serviceAccount)
+  });
+}
 
 module.exports = async (request, response) => {
   if (request.method !== 'POST') {
@@ -7,22 +23,18 @@ module.exports = async (request, response) => {
   }
 
   try {
-    if (!admin.apps.length) {
-      const serviceAccountString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT, 'base64').toString('utf8');
-      const serviceAccount = JSON.parse(serviceAccountString);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-      });
-    }
-    
-    const db = admin.firestore();
+    const app = getFirebaseApp();
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
     const { oobCode, recaptchaToken } = request.body;
 
     if (!oobCode || !recaptchaToken) {
       return response.status(400).send({ error: "Missing required information." });
     }
 
-    const recaptchaSecret = process.env.VITE_RECAPTCHA_SECRET_KEY; // Using the name from your screenshot
+    // 1. Verify the reCAPTCHA token with Google
+    const recaptchaSecret = process.env.VITE_RECAPTCHA_SECRET_KEY;
     const verificationUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
 
     const recaptchaResponse = await axios.post(verificationUrl);
@@ -30,16 +42,12 @@ module.exports = async (request, response) => {
       return response.status(400).send({ error: "CAPTCHA verification failed. Please try again." });
     }
 
-    // --- NEW DEBUGGING LINE ---
-    // This will print all available function names on the auth object to your Vercel logs.
-    console.log('Available auth methods:', Object.keys(admin.auth()));
-
     // 2. Get user UID from the action code BEFORE applying it
-    const info = await admin.auth().checkActionCode(oobCode); // This is the line that has been failing
+    const info = await auth.checkActionCode(oobCode);
     const userUid = info.data.uid;
 
     // 3. Apply the email verification code in Firebase Auth
-    await admin.auth().applyActionCode(oobCode);
+    await auth.applyActionCode(oobCode);
 
     // 4. Update the user's document in Firestore to set our custom flag
     const userDocRef = db.collection('users').doc(userUid);
