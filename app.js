@@ -107,6 +107,13 @@ const accessDeniedHTML = `
     <p>Please log in or register to continue.</p>
 `;
 
+const myListingsHTML = `
+    <h2>My Listings</h2>
+    <p>Here are all the items you currently have for sale.</p>
+    <div id="my-listings-grid" class="listings-grid">
+        </div>
+`;
+
 
 // --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
@@ -155,13 +162,36 @@ function setupAuthListener(auth, db, storage) {
                 document.getElementById('app-content').style.display = 'block';
                 document.getElementById('listings-section').style.display = 'block';
                 
-                navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
+                navLinks.innerHTML = `
+                    <a href="#" id="home-link">Home</a>
+                    <a href="#" id="my-listings-link">My Listings</a>
+                    <button id="logout-button">Logout</button>
+                `;
                 appContent.innerHTML = welcomeHTML(user);
 
                 document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
+                
                 document.getElementById('create-listing-btn').addEventListener('click', () => {
                     appContent.innerHTML = createListingHTML;
                     addListingFormListener(auth, db, storage);
+                });
+
+                document.getElementById('home-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    // Show the main welcome screen and all listings
+                    document.getElementById('app-content').style.display = 'block';
+                    document.getElementById('listings-section').style.display = 'block';
+                    appContent.innerHTML = welcomeHTML(user);
+                    document.getElementById('create-listing-btn').addEventListener('click', () => {
+                         appContent.innerHTML = createListingHTML;
+                         addListingFormListener(auth, db, storage);
+                    });
+                    loadAllListings(auth, db, storage);
+                });
+
+                document.getElementById('my-listings-link').addEventListener('click', (e) => {
+                    e.preventDefault();
+                    renderMyListings(auth, db, storage);
                 });
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
@@ -299,6 +329,47 @@ function loadAllListings(auth, db, storage, searchTerm = '') {
         listingsGrid.innerHTML = '<p class="error">Could not load listings.</p>';
     });
 }
+
+
+// --- FUNCTION TO RENDER ONLY THE CURRENT USER'S LISTINGS ---
+async function renderMyListings(auth, db, storage) {
+    const user = auth.currentUser;
+    if (!user) return; // Exit if no user is logged in
+
+    // Hide the main app content and listings section to show our new view
+    document.getElementById('app-content').style.display = 'none';
+    document.getElementById('listings-section').style.display = 'block'; // Keep the section container
+    listingsGrid.innerHTML = ''; // Clear the main grid
+
+    // Inject our "My Listings" page structure
+    document.getElementById('listings-section').innerHTML = myListingsHTML;
+    const myGrid = document.getElementById('my-listings-grid');
+
+    try {
+        // Query Firestore for listings where sellerId matches the current user's ID
+        const querySnapshot = await db.collection('listings')
+            .where('sellerId', '==', user.uid)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        if (querySnapshot.empty) {
+            myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+            return;
+        }
+
+        querySnapshot.forEach(doc => {
+            myGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
+        });
+
+        // Re-attach event listeners to the new cards
+        addCardEventListeners(auth, db, storage);
+
+    } catch (error) {
+        console.error("Error fetching user's listings:", error);
+        myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
+    }
+}
+
 
 // reusable function that renders the details page AND attaches all button listeners.
 function showItemDetails(auth, db, storage, listingId) {
