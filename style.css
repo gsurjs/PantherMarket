@@ -343,6 +343,53 @@ form textarea {
     margin-bottom: 1.5rem;
 }
 
+#main-gallery-image {
+    display: block;
+    width: 100%;
+    max-width: 600px;
+    max-height: 500px;
+    object-fit: contain;
+    margin: 0 auto;
+    border-radius: 12px;
+}
+
+/* NEW: Styles for the gallery containers and thumbnails */
+.image-gallery {
+    margin-bottom: 1.5rem;
+}
+
+.main-image-container {
+    margin-bottom: 1rem;
+}
+
+.thumbnail-container {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.thumbnail-image {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+}
+
+.thumbnail-image:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.thumbnail-image.active {
+    border-color: #0050e6;
+    opacity: 1;
+}
+
 /* --- Status & Helper Classes --- */
 .error {
     color: #dc3545;
