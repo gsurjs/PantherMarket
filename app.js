@@ -593,7 +593,7 @@ function addListingFormListener(auth, db, storage) {
 
                 previewWrapper.appendChild(img);
                 previewWrapper.appendChild(removeBtn);
-                previewContainer.appendChild(previewWrapper);
+                previewContainer.insertBefore(previewWrapper, previewContainer.firstChild);
             };
             reader.readAsDataURL(file);
         });
