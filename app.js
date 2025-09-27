@@ -754,11 +754,11 @@ function addListingFormListener(auth, db, storage) {
 
 // --FUNCTION FOR FETCHING SPECIFIC LISTING DATA FROM FIRESTORE TO DISPLAY--
 function addCardEventListeners(auth, db, storage) {
-    const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
-    viewDetailsButtons.forEach(button => {
-        button.addEventListener('click', async (e) => { // Make async
+    const listingCards = document.querySelectorAll('.listing-card');
+    listingCards.forEach(card => {
+        // Add the click event listener directly to the card
+        card.addEventListener('click', async (e) => { // Make async
             const currentUser = auth.currentUser;
-            const card = e.target.closest('.listing-card');
             const listingId = card.dataset.id;
 
             // first check if user is lgoged out
