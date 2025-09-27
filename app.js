@@ -500,8 +500,15 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
 // --- FUNCTION TO ADD LISTING FORM LISTENER (UPDATED WITH NEW SECURITY CHECK) ---
 function addListingFormListener(auth, db, storage) {
     const listingForm = document.getElementById('create-listing-form');
-    const formError = document.getElementById('form-error');
     const user = auth.currentUser;
+
+    // Get all the new/modified elements
+    const formError = document.getElementById('form-error');
+    const submitBtn = document.getElementById('submit-listing-btn');
+    const cancelBtn = document.getElementById('cancel-listing-btn');
+    const progressContainer = document.getElementById('upload-progress-container');
+    const progressBar = document.getElementById('upload-progress-bar');
+    const progressLabel = document.getElementById('progress-label');
 
     listingForm.addEventListener('submit', async (e) => { // Make the event listener async
         e.preventDefault();
@@ -536,18 +543,38 @@ function addListingFormListener(auth, db, storage) {
             return;
         }
 
+        // --- START UPLOAD PROCESS ---
+        // Disable buttons and show the progress bar
+        submitBtn.disabled = true;
+        cancelBtn.disabled = true;
+        progressContainer.style.display = 'block';
+        formError.textContent = '';
+
         // 1. Upload Image to Firebase Storage
         const filePath = `listings/${user.uid}/${Date.now()}_${imageFile.name}`;
         const fileRef = storage.ref(filePath);
         const uploadTask = fileRef.put(imageFile);
 
         uploadTask.on('state_changed',
-            (snapshot) => { /* Can be used for upload progress bar */ },
+            (snapshot) => {
+                // --- UPDATE PROGRESS BAR ---
+                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                progressBar.value = progress;
+                progressLabel.textContent = `Uploading... ${Math.round(progress)}%`;
+            },
             (error) => {
+                // --- HANDLE ERRORS ---
                 console.error("Upload failed:", error);
                 formError.textContent = "Image upload failed. Please try again.";
+                // Re-enable buttons and hide progress bar on failure
+                submitBtn.disabled = false;
+                cancelBtn.disabled = false;
+                progressContainer.style.display = 'none';
             },
             () => {
+                // --- HANDLE SUCCESS ---
+                progressLabel.textContent = 'Processing...'; // Feedback for the final step
+
                 // 2. Get Image URL after upload
                 uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
                     // 3. Save Listing to Firestore
@@ -574,6 +601,10 @@ function addListingFormListener(auth, db, storage) {
                     }).catch(error => {
                         console.error("Error adding document: ", error);
                         formError.textContent = "Failed to save listing.";
+                        // Re-enable buttons and hide progress on failure
+                        submitBtn.disabled = false;
+                        cancelBtn.disabled = false;
+                        progressContainer.style.display = 'none';                    
                     });
                 });
             }

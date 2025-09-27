@@ -309,10 +309,13 @@ form textarea {
 
 /* --- Item Details View --- */
 .item-details img {
-    max-width: 100%;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 1rem;
+    display: block;
+    width: 100%;
+    max-width: 600px;
+    max-height: 500px;
+    object-fit: contain;
+    margin: 0 auto 1.5rem auto;
+    border-radius: 12px;
 }
 
 .item-details h2 {
@@ -362,6 +365,36 @@ form textarea {
 
 .loading {
     animation: pulse 1.5s infinite;
+}
+
+#upload-progress-container {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+#upload-progress-container p {
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+#upload-progress-bar {
+    width: 100%;
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #ccc;
+}
+
+/* Styling for the progress bar color */
+#upload-progress-bar::-webkit-progress-bar {
+    background-color: #f0f0f0;
+}
+#upload-progress-bar::-webkit-progress-value {
+    background-color: #0050e6;
+    transition: width 0.1s linear;
+}
+#upload-progress-bar::-moz-progress-bar {
+    background-color: #0050e6;
 }
 
 /* --- Dark Mode Theme --- */
