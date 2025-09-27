@@ -188,6 +188,9 @@ function setupAuthListener(auth, db, storage) {
                     sessionStorage.setItem('currentView', 'home'); // Save the state
                     const listingsSection = document.getElementById('listings-section');
                     document.getElementById('app-content').style.display = 'block';
+
+                    listingsSection.style.display = 'block';
+
                     appContent.innerHTML = welcomeHTML(user);
                     document.getElementById('create-listing-btn').addEventListener('click', () => {
                          appContent.innerHTML = createListingHTML;
