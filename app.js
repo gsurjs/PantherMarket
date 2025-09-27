@@ -75,7 +75,7 @@ const createListingHTML = `
 
 const listingCardHTML = (listing, id) => `
     <div class="listing-card" data-id="${id}">
-        <img src="${listing.imageUrls[0]}" alt="${listing.title}">
+        <img src="${(listing.imageUrls && listing.imageUrls[0]) || listing.imageUrl}" alt="${listing.title}">
         <div class="listing-card-info">
             <h3>${listing.title}</h3>
             <p>$${listing.price}</p>
@@ -84,17 +84,21 @@ const listingCardHTML = (listing, id) => `
     </div>
 `;
 
-const itemDetailsHTML = (listing, isOwner) => `
+const itemDetailsHTML = (listing, isOwner) => {
+    // This line creates an array of images, whether the source is a single URL or an array of URLs.
+    const images = listing.imageUrls || [listing.imageUrl];
+
+    return `
     <div class="item-details">
         <button id="back-to-listings-btn">&larr; Back to Listings</button>
         <h2>${listing.title}</h2>
         <div class="image-gallery">
             <div class="main-image-container">
-                <img id="main-gallery-image" src="${listing.imageUrls[0]}" alt="${listing.title}">
+                <img id="main-gallery-image" src="${images[0]}" alt="${listing.title}">
             </div>
-            ${listing.imageUrls.length > 1 ? `
+            ${images.length > 1 ? `
                 <div class="thumbnail-container">
-                    ${listing.imageUrls.map((url, index) => `
+                    ${images.map((url, index) => `
                         <img src="${url}" alt="Thumbnail ${index + 1}" class="thumbnail-image ${index === 0 ? 'active' : ''}">
                     `).join('')}
                 </div>
@@ -110,7 +114,8 @@ const itemDetailsHTML = (listing, isOwner) => `
             </div>
         ` : ''}
     </div>
-`;
+    `;
+};
 
 const editListingHTML = (listing) => `
     <h2>Edit Listing</h2>
@@ -437,6 +442,7 @@ function showItemDetails(auth, db, storage, listingId) {
 
             document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'none';
+            // The updated itemDetailsHTML function is now called here
             appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
 
             const mainImage = document.getElementById('main-gallery-image');
@@ -454,10 +460,8 @@ function showItemDetails(auth, db, storage, listingId) {
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');
                 if (previousView === 'myListings') {
-                    // If we came from "My Listings", go back there
                     document.getElementById('my-listings-link').click();
                 } else {
-                    // Otherwise, go back to the Home page
                     document.getElementById('home-link').click();
                 }
             });
@@ -470,9 +474,13 @@ function showItemDetails(auth, db, storage, listingId) {
 
                document.getElementById('delete-listing-btn').addEventListener('click', () => {
                     if (confirm('Are you sure you want to delete this listing?')) {
-                        // Delete all images from Storage
-                        const deletePromises = listingData.imageUrls.map(url => {
-                            return storage.refFromURL(url).delete();
+                        // This line ensures the delete logic works for BOTH old and new listings.
+                        const imagesToDelete = listingData.imageUrls || [listingData.imageUrl];
+                        
+                        const deletePromises = imagesToDelete.map(url => {
+                            // A check to prevent errors if a URL is somehow invalid
+                            if (url) return storage.refFromURL(url).delete();
+                            return Promise.resolve(); // Return a resolved promise for invalid URLs
                         });
 
                         Promise.allSettled(deletePromises)
