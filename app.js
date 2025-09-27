@@ -77,19 +77,22 @@ const createListingHTML = `
 `;
 
 const listingCardHTML = (listing, id) => {
-    // 1. If a listing is actively processing, hide it. Otherwise, show it.
+    // Hide listings that are still processing
     if (listing.status === 'processing') return '';
 
-    // 2. Determine the correct image URL to use (new format first, then fallback to old format)
+    // Determine the correct image URL, checking all possible data structures
     let imageUrl;
     if (listing.processedImageUrls) {
-        // Use the new, optimized thumbnail
+        // 1. Use the new, optimized thumbnail if it exists
         imageUrl = listing.processedImageUrls.thumb;
     } else if (listing.imageUrls && listing.imageUrls.length > 0) {
-        // Fallback to the first image from the old array structure
+        // 2. Fallback to the multi-image array
         imageUrl = listing.imageUrls[0];
+    } else if (listing.imageUrl) {
+        // 3. ADDED: Fallback to the original single image string
+        imageUrl = listing.imageUrl;
     } else {
-        // A final fallback to a placeholder if no images are found
+        // 4. A final fallback to a placeholder
         imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
     }
 
@@ -106,16 +109,19 @@ const listingCardHTML = (listing, id) => {
 };
 
 const itemDetailsHTML = (listing, isOwner) => {
-    // Determine the correct large image URL to use (new vs. old)
+    // Determine the correct large image URL, checking all possible data structures
     let largeImageUrl;
     if (listing.processedImageUrls) {
-        // Use the new, optimized large image
+        // 1. Use the new, optimized large image
         largeImageUrl = listing.processedImageUrls.large;
     } else if (listing.imageUrls && listing.imageUrls.length > 0) {
-        // Fallback to the first image from the old array structure
+        // 2. Fallback to the multi-image array
         largeImageUrl = listing.imageUrls[0];
+    } else if (listing.imageUrl) {
+        // 3. ADDED: Fallback to the original single image string
+        largeImageUrl = listing.imageUrl;
     } else {
-        // A final fallback
+        // 4. A final fallback
         largeImageUrl = "https://via.placeholder.com/1280x1280.png?text=No+Image";
     }
 
