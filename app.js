@@ -250,11 +250,8 @@ function setupAuthListener(auth, db, storage) {
                     }
                 } else {
                     // Default to the home view
-                    appContent.innerHTML = welcomeHTML(user);
-                    document.getElementById('create-listing-btn').addEventListener('click', () => {
-                        appContent.innerHTML = createListingHTML;
-                        addListingFormListener(auth, db, storage);
-                    });
+                    // Default to the home view
+                    renderWelcomeView(user, auth, db, storage);
                 }
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
