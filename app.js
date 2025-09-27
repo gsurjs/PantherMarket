@@ -147,6 +147,14 @@ const myListingsHTML = `
         </div>
 `;
 
+function renderWelcomeView(user, auth, db, storage) {
+    appContent.innerHTML = welcomeHTML(user);
+    document.getElementById('create-listing-btn').addEventListener('click', () => {
+        appContent.innerHTML = createListingHTML;
+        addListingFormListener(auth, db, storage);
+    });
+}
+
 
 // --- MAIN APP INITIALIZATION ---
 async function initializeApp() {
@@ -214,11 +222,8 @@ function setupAuthListener(auth, db, storage) {
 
                     listingsSection.style.display = 'block';
 
-                    appContent.innerHTML = welcomeHTML(user);
-                    document.getElementById('create-listing-btn').addEventListener('click', () => {
-                         appContent.innerHTML = createListingHTML;
-                         addListingFormListener(auth, db, storage);
-                    });
+                    renderWelcomeView(user, auth, db, storage);
+
                     listingsSection.innerHTML = mainListingsSectionHTML;
                     setupSearch(auth, db, storage);
                     loadAllListings(auth, db, storage);
@@ -241,6 +246,7 @@ function setupAuthListener(auth, db, storage) {
                     } else {
                         // Default to home if ID is missing
                         document.getElementById('home-link').click();
+                        renderWelcomeView(user, auth, db, storage);
                     }
                 } else {
                     // Default to the home view
@@ -566,14 +572,12 @@ function addListingFormListener(auth, db, storage) {
     // Array to store all selected files for upload.
     let filesToUpload = [];
 
-    // --- Helper function to render the previews ---
+    // Helper function to render the previews
     const renderPreviews = () => {
-        // Clear the container to re-render all current previews
         previewContainer.innerHTML = '';
         filesToUpload.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = (e) => {
-                // Create a wrapper for each preview and its remove button
                 const previewWrapper = document.createElement('div');
                 previewWrapper.classList.add('preview-wrapper');
 
@@ -584,9 +588,8 @@ function addListingFormListener(auth, db, storage) {
                 const removeBtn = document.createElement('button');
                 removeBtn.classList.add('remove-preview-btn');
                 removeBtn.textContent = 'X';
-                removeBtn.type = 'button'; // Prevent form submission
+                removeBtn.type = 'button';
                 removeBtn.onclick = () => {
-                    // Remove the file from our array and re-render
                     filesToUpload.splice(index, 1);
                     renderPreviews();
                 };
@@ -599,25 +602,20 @@ function addListingFormListener(auth, db, storage) {
         });
     };
 
-    // The 'change' event now adds files to our array instead of replacing them.
     imageInput.addEventListener('change', (event) => {
         formError.textContent = '';
         const newFiles = Array.from(event.target.files);
 
         for (const file of newFiles) {
             if (filesToUpload.length < 4) {
-                // Add new files to our persistent array
                 filesToUpload.push(file);
             } else {
                 formError.textContent = "You can only select a maximum of 4 images.";
-                break; // Stop adding files if the limit is reached
+                break;
             }
         }
         
-        // Re-render all previews from our updated array
         renderPreviews();
-        
-        // Clear the file input so the user can add more files in the next selection
         imageInput.value = '';
     });
 
@@ -644,14 +642,12 @@ function addListingFormListener(auth, db, storage) {
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
         
-        // MODIFIED: Use our manually managed array of files for submission.
         const imageFiles = filesToUpload;
 
         if (!imageFiles || imageFiles.length === 0) {
             formError.textContent = "Please select at least one image.";
             return;
         }
-        // The check for > 4 is implicitly handled by the preview logic now, but we keep it as a safeguard.
         if (imageFiles.length > 4) {
             formError.textContent = "You can only upload a maximum of 4 images.";
             return;
@@ -685,19 +681,16 @@ function addListingFormListener(auth, db, storage) {
             });
         });
 
-        // --- SAVE AFTER ALL UPLOADS ARE DONE ---
         try {
-            // Wait for all upload promises to resolve.
             const downloadURLs = await Promise.all(uploadPromises);
 
-            // Save the listing to Firestore with the array of image URLs.
             await db.collection("listings").add({
                 title: title,
                 title_lowercase: title.toLowerCase(),
                 title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean),
                 description: description,
                 price: Number(price),
-                imageUrls: downloadURLs, // MODIFIED: Use `imageUrls` (plural) to store the array
+                imageUrls: downloadURLs,
                 sellerId: user.uid,
                 sellerEmail: user.email,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -707,7 +700,6 @@ function addListingFormListener(auth, db, storage) {
             document.getElementById('home-link').click();
 
         } catch (error) {
-            // This block will run if any of the uploads fail.
             formError.textContent = "An image failed to upload. Please try again.";
             submitBtn.disabled = false;
             cancelBtn.disabled = false;
@@ -715,12 +707,10 @@ function addListingFormListener(auth, db, storage) {
         }
     });
     
-    document.getElementById('cancel-listing-btn').addEventListener('click', () => {
-        appContent.innerHTML = welcomeHTML(user);
-        document.getElementById('create-listing-btn').addEventListener('click', () => {
-            appContent.innerHTML = createListingHTML;
-            addListingFormListener(auth, db, storage);
-        });
+    // This is the updated section as requested.
+    // It now correctly calls the new helper function, preventing duplicate event listeners.
+    cancelBtn.addEventListener('click', () => {
+        renderWelcomeView(user, auth, db, storage);
     });
 }
 
