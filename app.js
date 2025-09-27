@@ -758,6 +758,7 @@ function addCardEventListeners(auth, db, storage) {
     listingCards.forEach(card => {
         // Add the click event listener directly to the card
         card.addEventListener('click', async (e) => { // Make async
+            e.preventDefault();
             const currentUser = auth.currentUser;
             const listingId = card.dataset.id;
 
