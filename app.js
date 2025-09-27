@@ -560,41 +560,70 @@ function addListingFormListener(auth, db, storage) {
     const progressContainer = document.getElementById('upload-progress-container');
     const progressBar = document.getElementById('upload-progress-bar');
     const progressLabel = document.getElementById('progress-label');
-
     const imageInput = document.getElementById('listing-image');
     const previewContainer = document.getElementById('image-preview-container');
 
-    imageInput.addEventListener('change', (event) => {
-        // Clear previous previews and errors
+    // Array to store all selected files for upload.
+    let filesToUpload = [];
+
+    // --- Helper function to render the previews ---
+    const renderPreviews = () => {
+        // Clear the container to re-render all current previews
         previewContainer.innerHTML = '';
-        formError.textContent = '';
-        const files = event.target.files;
-
-        // Validate file count
-        if (files.length > 4) {
-            formError.textContent = "You can only select a maximum of 4 images.";
-            // Clear the file input to prevent submission of too many files
-            imageInput.value = ''; 
-            return;
-        }
-
-        // Loop through selected files and create previews
-        for (const file of files) {
+        filesToUpload.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = (e) => {
+                // Create a wrapper for each preview and its remove button
+                const previewWrapper = document.createElement('div');
+                previewWrapper.classList.add('preview-wrapper');
+
                 const img = document.createElement('img');
                 img.src = e.target.result;
                 img.classList.add('preview-thumbnail');
-                previewContainer.appendChild(img);
+
+                const removeBtn = document.createElement('button');
+                removeBtn.classList.add('remove-preview-btn');
+                removeBtn.textContent = 'X';
+                removeBtn.type = 'button'; // Prevent form submission
+                removeBtn.onclick = () => {
+                    // Remove the file from our array and re-render
+                    filesToUpload.splice(index, 1);
+                    renderPreviews();
+                };
+
+                previewWrapper.appendChild(img);
+                previewWrapper.appendChild(removeBtn);
+                previewContainer.appendChild(previewWrapper);
             };
             reader.readAsDataURL(file);
+        });
+    };
+
+    // The 'change' event now adds files to our array instead of replacing them.
+    imageInput.addEventListener('change', (event) => {
+        formError.textContent = '';
+        const newFiles = Array.from(event.target.files);
+
+        for (const file of newFiles) {
+            if (filesToUpload.length < 4) {
+                // Add new files to our persistent array
+                filesToUpload.push(file);
+            } else {
+                formError.textContent = "You can only select a maximum of 4 images.";
+                break; // Stop adding files if the limit is reached
+            }
         }
+        
+        // Re-render all previews from our updated array
+        renderPreviews();
+        
+        // Clear the file input so the user can add more files in the next selection
+        imageInput.value = '';
     });
 
     listingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // Security check remains the same
         if (!user) return;
         try {
             const userDocRef = db.collection('users').doc(user.uid);
@@ -615,14 +644,14 @@ function addListingFormListener(auth, db, storage) {
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
         
-        // Get the list of files from the input.
-        const imageFiles = document.getElementById('listing-image').files;
+        // MODIFIED: Use our manually managed array of files for submission.
+        const imageFiles = filesToUpload;
 
-        // MODIFIED: Validation now checks the number of selected files.
         if (!imageFiles || imageFiles.length === 0) {
             formError.textContent = "Please select at least one image.";
             return;
         }
+        // The check for > 4 is implicitly handled by the preview logic now, but we keep it as a safeguard.
         if (imageFiles.length > 4) {
             formError.textContent = "You can only upload a maximum of 4 images.";
             return;
@@ -633,28 +662,23 @@ function addListingFormListener(auth, db, storage) {
         progressContainer.style.display = 'block';
         formError.textContent = '';
 
-        // Create an array of upload promises, one for each file.
-        const uploadPromises = Array.from(imageFiles).map((file, index) => {
+        const uploadPromises = imageFiles.map((file, index) => {
             const filePath = `listings/${user.uid}/${Date.now()}_${file.name}`;
             const fileRef = storage.ref(filePath);
             const uploadTask = fileRef.put(file);
 
-            // Return a new promise for each upload
             return new Promise((resolve, reject) => {
                 uploadTask.on('state_changed',
                     (snapshot) => {
-                        // Update progress bar for the *current* file being uploaded
                         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                         progressBar.value = progress;
                         progressLabel.textContent = `Uploading image ${index + 1} of ${imageFiles.length}... ${Math.round(progress)}%`;
                     },
                     (error) => {
-                        // If an upload fails, reject the promise
                         console.error("Upload failed:", error);
                         reject(error);
                     },
                     () => {
-                        // When an upload is complete, get its URL and resolve the promise
                         uploadTask.snapshot.ref.getDownloadURL().then(resolve).catch(reject);
                     }
                 );
