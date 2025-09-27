@@ -298,6 +298,7 @@ form textarea {
     font-weight: 500;
     transition: all 0.2s ease;
     margin-top: 0.75rem;
+    pointer-events: none;
 }
 
 .view-details-btn:hover {
