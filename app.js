@@ -63,9 +63,13 @@ const createListingHTML = `
         <input type="number" id="listing-price" placeholder="Price ($)" step="0.01" required>
         <label for="listing-image">Upload Image:</label>
         <input type="file" id="listing-image" accept="image/*" required>
-        <button type="submit">Submit Listing</button>
+        <button type="submit" id="submit-listing-btn">Submit Listing</button>
         <button type="button" id="cancel-listing-btn">Cancel</button>
     </form>
+    <div id="upload-progress-container" style="display: none;">
+        <p id="progress-label">Uploading...</p>
+        <progress id="upload-progress-bar" value="0" max="100"></progress>
+    </div>
     <p id="form-error" class="error"></p>
 `;
 
