@@ -244,9 +244,8 @@ function setupAuthListener(auth, db, storage) {
                     if (savedItemId) {
                         showItemDetails(auth, db, storage, savedItemId);
                     } else {
-                        // Default to home if ID is missing
+                        // Default to home if ID is missing by programmatically clicking the link
                         document.getElementById('home-link').click();
-                        renderWelcomeView(user, auth, db, storage);
                     }
                 } else {
                     // Default to the home view
