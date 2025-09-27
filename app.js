@@ -63,6 +63,9 @@ const createListingHTML = `
         <input type="number" id="listing-price" placeholder="Price ($)" step="0.01" required>
         <label for="listing-image">Upload Images (Up to 4):</label>
         <input type="file" id="listing-image" accept="image/*" multiple required>
+
+        <div id="image-preview-container"></div>
+
         <button type="submit" id="submit-listing-btn">Submit Listing</button>
         <button type="button" id="cancel-listing-btn">Cancel</button>
     </form>
@@ -558,6 +561,36 @@ function addListingFormListener(auth, db, storage) {
     const progressBar = document.getElementById('upload-progress-bar');
     const progressLabel = document.getElementById('progress-label');
 
+    const imageInput = document.getElementById('listing-image');
+    const previewContainer = document.getElementById('image-preview-container');
+
+    imageInput.addEventListener('change', (event) => {
+        // Clear previous previews and errors
+        previewContainer.innerHTML = '';
+        formError.textContent = '';
+        const files = event.target.files;
+
+        // Validate file count
+        if (files.length > 4) {
+            formError.textContent = "You can only select a maximum of 4 images.";
+            // Clear the file input to prevent submission of too many files
+            imageInput.value = ''; 
+            return;
+        }
+
+        // Loop through selected files and create previews
+        for (const file of files) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.classList.add('preview-thumbnail');
+                previewContainer.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
     listingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -582,7 +615,7 @@ function addListingFormListener(auth, db, storage) {
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
         
-        // MODIFIED: Get the list of files from the input.
+        // Get the list of files from the input.
         const imageFiles = document.getElementById('listing-image').files;
 
         // MODIFIED: Validation now checks the number of selected files.

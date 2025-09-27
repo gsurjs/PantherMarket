@@ -380,6 +380,24 @@ form textarea {
     opacity: 1;
 }
 
+/* --- Image Preview Styles --- */
+
+#image-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+}
+
+.preview-thumbnail {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}
+
 /* --- Status & Helper Classes --- */
 .error {
     color: #dc3545;
