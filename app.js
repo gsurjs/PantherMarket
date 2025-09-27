@@ -109,20 +109,20 @@ const listingCardHTML = (listing, id) => {
 };
 
 const itemDetailsHTML = (listing, isOwner) => {
-    // Determine the correct large image URL, checking all possible data structures
-    let largeImageUrl;
+    // Create a unified 'images' array from all possible data structures
+    let images = [];
     if (listing.processedImageUrls) {
-        // 1. Use the new, optimized large image
-        largeImageUrl = listing.processedImageUrls.large;
+        // New listings have only one primary image
+        images = [listing.processedImageUrls.large];
     } else if (listing.imageUrls && listing.imageUrls.length > 0) {
-        // 2. Fallback to the multi-image array
-        largeImageUrl = listing.imageUrls[0];
+        // Old listings with multiple images
+        images = listing.imageUrls;
     } else if (listing.imageUrl) {
-        // 3. ADDED: Fallback to the original single image string
-        largeImageUrl = listing.imageUrl;
+        // Very old listings with a single image
+        images = [listing.imageUrl];
     } else {
-        // 4. A final fallback
-        largeImageUrl = "https://via.placeholder.com/1280x1280.png?text=No+Image";
+        // Fallback
+        images = ["https://via.placeholder.com/1280x1280.png?text=No+Image"];
     }
 
     return `
@@ -131,9 +131,18 @@ const itemDetailsHTML = (listing, isOwner) => {
         <h2>${listing.title}</h2>
         <div class="image-gallery">
             <div class="main-image-container">
-                <img id="main-gallery-image" src="${largeImageUrl}" alt="${listing.title}">
+                <img id="main-gallery-image" src="${images[0]}" alt="${listing.title}">
             </div>
+            
+            ${images.length > 1 ? `
+                <div class="thumbnail-container">
+                    ${images.map((url, index) => `
+                        <img src="${url}" alt="Thumbnail ${index + 1}" class="thumbnail-image ${index === 0 ? 'active' : ''}">
+                    `).join('')}
+                </div>
+            ` : ''}
         </div>
+        
         <p class="price">$${listing.price}</p>
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
@@ -478,16 +487,18 @@ function showItemDetails(auth, db, storage, listingId) {
             appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
 
             const mainImage = document.getElementById('main-gallery-image');
-            if (mainImage) {
-                 const thumbnails = document.querySelectorAll('.thumbnail-image');
-                 thumbnails.forEach(thumbnail => {
-                    thumbnail.addEventListener('click', () => {
-                        mainImage.src = thumbnail.src;
-                        thumbnails.forEach(t => t.classList.remove('active'));
-                        thumbnail.classList.add('active');
-                    });
+            const thumbnails = document.querySelectorAll('.thumbnail-image');
+            
+            thumbnails.forEach(thumbnail => {
+                thumbnail.addEventListener('click', () => {
+                    // Update the main image source
+                    mainImage.src = thumbnail.src;
+                    
+                    // Update the 'active' class for styling
+                    thumbnails.forEach(t => t.classList.remove('active'));
+                    thumbnail.classList.add('active');
                 });
-            }
+            });
 
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');
