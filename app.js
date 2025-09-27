@@ -565,12 +565,25 @@ function addListingFormListener(auth, db, storage) {
     const imageInput = document.getElementById('listing-image');
     const previewContainer = document.getElementById('image-preview-container');
 
+    if (!window.currentListingFiles) {
+        window.currentListingFiles = [];
+    }
+
     // Array to store all selected files for upload.
-    let filesToUpload = [];
+    let filesToUpload = window.currentListingFiles;
+
+    filesToUpload.length = 0;
+    
+    // Check if there are existing previews (from previous navigation) and clear them
+    if (previewContainer) {
+        previewContainer.innerHTML = '';
+    }
 
     // Helper function to render the previews
     const renderPreviews = () => {
         previewContainer.innerHTML = '';
+        console.log('Rendering previews for', filesToUpload.length, 'files');
+        
         filesToUpload.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -587,12 +600,13 @@ function addListingFormListener(auth, db, storage) {
                 removeBtn.type = 'button';
                 removeBtn.onclick = () => {
                     filesToUpload.splice(index, 1);
+                    console.log('File removed, remaining files:', filesToUpload.length);
                     renderPreviews();
                 };
 
                 previewWrapper.appendChild(img);
                 previewWrapper.appendChild(removeBtn);
-                previewContainer.insertBefore(previewWrapper, previewContainer.firstChild);
+                previewContainer.appendChild(previewWrapper);
             };
             reader.readAsDataURL(file);
         });
@@ -601,24 +615,40 @@ function addListingFormListener(auth, db, storage) {
     imageInput.addEventListener('change', (event) => {
         formError.textContent = '';
         const newFiles = Array.from(event.target.files);
+        
+        console.log('Change event fired. Files selected:', newFiles.length);
+        console.log('Files before adding:', filesToUpload.length);
 
         for (const file of newFiles) {
             if (filesToUpload.length < 4) {
                 filesToUpload.push(file);
+                console.log('Added file:', file.name);
             } else {
                 formError.textContent = "You can only select a maximum of 4 images.";
                 break;
             }
         }
         
+        console.log('Files after adding:', filesToUpload.length);
+        console.log('File array contents:', filesToUpload);
         renderPreviews();
-        imageInput.value = '';
+        // Don't clear the input value - this might be useful for debugging
+        // imageInput.value = '';
     });
 
     listingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        console.log('=== FORM SUBMISSION ===');
+        console.log('Files in array:', filesToUpload);
+        console.log('Number of files:', filesToUpload.length);
+        console.log('Array is empty?', filesToUpload.length === 0);
 
-        if (!user) return;
+        if (!user) {
+            console.error('No user logged in');
+            return;
+        }
+        
         try {
             const userDocRef = db.collection('users').doc(user.uid);
             const userDoc = await userDocRef.get({ source: 'server' });
@@ -638,24 +668,28 @@ function addListingFormListener(auth, db, storage) {
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
         
-        const imageFiles = filesToUpload;
-
-        if (!imageFiles || imageFiles.length === 0) {
+        console.log('Form values:', { title, description, price });
+        
+        // Use the filesToUpload array directly
+        if (filesToUpload.length === 0) {
             formError.textContent = "Please select at least one image.";
+            console.error('File validation failed: No files in array');
             return;
         }
-        if (imageFiles.length > 4) {
+        if (filesToUpload.length > 4) {
             formError.textContent = "You can only upload a maximum of 4 images.";
             return;
         }
+
+        console.log('Starting upload for', filesToUpload.length, 'files');
 
         submitBtn.disabled = true;
         cancelBtn.disabled = true;
         progressContainer.style.display = 'block';
         formError.textContent = '';
 
-        const uploadPromises = imageFiles.map((file, index) => {
-            const filePath = `listings/${user.uid}/${Date.now()}_${file.name}`;
+        const uploadPromises = filesToUpload.map((file, index) => {
+            const filePath = `listings/${user.uid}/${Date.now()}_${index}_${file.name}`;
             const fileRef = storage.ref(filePath);
             const uploadTask = fileRef.put(file);
 
@@ -664,10 +698,10 @@ function addListingFormListener(auth, db, storage) {
                     (snapshot) => {
                         const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
                         progressBar.value = progress;
-                        progressLabel.textContent = `Uploading image ${index + 1} of ${imageFiles.length}... ${Math.round(progress)}%`;
+                        progressLabel.textContent = `Uploading image ${index + 1} of ${filesToUpload.length}... ${Math.round(progress)}%`;
                     },
                     (error) => {
-                        console.error("Upload failed:", error);
+                        console.error("Upload failed for file", index, ":", error);
                         reject(error);
                     },
                     () => {
@@ -679,6 +713,7 @@ function addListingFormListener(auth, db, storage) {
 
         try {
             const downloadURLs = await Promise.all(uploadPromises);
+            console.log('All uploads complete. URLs:', downloadURLs);
 
             await db.collection("listings").add({
                 title: title,
@@ -693,19 +728,25 @@ function addListingFormListener(auth, db, storage) {
             });
 
             alert('Listing created successfully!');
+            // Clear the filesToUpload array after successful submission
+            filesToUpload.length = 0;
+            window.currentListingFiles = [];
             document.getElementById('home-link').click();
 
         } catch (error) {
-            formError.textContent = "An image failed to upload. Please try again.";
+            console.error("Upload/database error:", error);
+            formError.textContent = "An error occurred. Please try again.";
             submitBtn.disabled = false;
             cancelBtn.disabled = false;
             progressContainer.style.display = 'none';
         }
     });
     
-    // This is the updated section as requested.
-    // It now correctly calls the new helper function, preventing duplicate event listeners.
+    // Cancel button listener
     cancelBtn.addEventListener('click', () => {
+        // Clear the files when canceling
+        filesToUpload.length = 0;
+        window.currentListingFiles = [];
         renderWelcomeView(user, auth, db, storage);
     });
 }
