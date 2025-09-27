@@ -61,8 +61,11 @@ const createListingHTML = `
         <input type="text" id="listing-title" placeholder="Item Title" required>
         <textarea id="listing-desc" placeholder="Item Description" required></textarea>
         <input type="number" id="listing-price" placeholder="Price ($)" step="0.01" required>
-        <label for="listing-image">Upload Image:</label>
-        <input type="file" id="listing-image" accept="image/*" required>
+        <label for="listing-image">Upload Images (Up to 4):</label>
+        <input type="file" id="listing-image" accept="image/*" multiple required>
+
+        <div id="image-preview-container"></div>
+
         <button type="submit" id="submit-listing-btn">Submit Listing</button>
         <button type="button" id="cancel-listing-btn">Cancel</button>
     </form>
@@ -75,7 +78,7 @@ const createListingHTML = `
 
 const listingCardHTML = (listing, id) => `
     <div class="listing-card" data-id="${id}">
-        <img src="${listing.imageUrl}" alt="${listing.title}">
+        <img src="${(listing.imageUrls && listing.imageUrls[0]) || listing.imageUrl}" alt="${listing.title}">
         <div class="listing-card-info">
             <h3>${listing.title}</h3>
             <p>$${listing.price}</p>
@@ -84,11 +87,26 @@ const listingCardHTML = (listing, id) => `
     </div>
 `;
 
-const itemDetailsHTML = (listing, isOwner) => `
+const itemDetailsHTML = (listing, isOwner) => {
+    // This line creates an array of images, whether the source is a single URL or an array of URLs.
+    const images = listing.imageUrls || [listing.imageUrl];
+
+    return `
     <div class="item-details">
         <button id="back-to-listings-btn">&larr; Back to Listings</button>
         <h2>${listing.title}</h2>
-        <img src="${listing.imageUrl}" alt="${listing.title}">
+        <div class="image-gallery">
+            <div class="main-image-container">
+                <img id="main-gallery-image" src="${images[0]}" alt="${listing.title}">
+            </div>
+            ${images.length > 1 ? `
+                <div class="thumbnail-container">
+                    ${images.map((url, index) => `
+                        <img src="${url}" alt="Thumbnail ${index + 1}" class="thumbnail-image ${index === 0 ? 'active' : ''}">
+                    `).join('')}
+                </div>
+            ` : ''}
+        </div>
         <p class="price">$${listing.price}</p>
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
@@ -99,7 +117,8 @@ const itemDetailsHTML = (listing, isOwner) => `
             </div>
         ` : ''}
     </div>
-`;
+    `;
+};
 
 const editListingHTML = (listing) => `
     <h2>Edit Listing</h2>
@@ -107,7 +126,7 @@ const editListingHTML = (listing) => `
         <input type="text" id="listing-title" value="${listing.title}" required>
         <textarea id="listing-desc" required>${listing.description}</textarea>
         <input type="number" id="listing-price" value="${listing.price}" step="0.01" required>
-        <p><em>To change the image, please delete this listing and create a new one.</em></p>
+        <p><em>To change images, please delete this listing and create a new one.</em></p>
         <button type="submit">Save Changes</button>
         <button type="button" id="cancel-edit-btn">Cancel</button>
     </form>
@@ -426,15 +445,26 @@ function showItemDetails(auth, db, storage, listingId) {
 
             document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'none';
+            // The updated itemDetailsHTML function is now called here
             appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
+
+            const mainImage = document.getElementById('main-gallery-image');
+            if (mainImage) {
+                 const thumbnails = document.querySelectorAll('.thumbnail-image');
+                 thumbnails.forEach(thumbnail => {
+                    thumbnail.addEventListener('click', () => {
+                        mainImage.src = thumbnail.src;
+                        thumbnails.forEach(t => t.classList.remove('active'));
+                        thumbnail.classList.add('active');
+                    });
+                });
+            }
 
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');
                 if (previousView === 'myListings') {
-                    // If we came from "My Listings", go back there
                     document.getElementById('my-listings-link').click();
                 } else {
-                    // Otherwise, go back to the Home page
                     document.getElementById('home-link').click();
                 }
             });
@@ -445,16 +475,33 @@ function showItemDetails(auth, db, storage, listingId) {
                     addEditFormListener(auth, db, storage, listingId);
                 });
 
-                document.getElementById('delete-listing-btn').addEventListener('click', () => {
+               document.getElementById('delete-listing-btn').addEventListener('click', () => {
                     if (confirm('Are you sure you want to delete this listing?')) {
-                        const imageRef = storage.refFromURL(listingData.imageUrl);
-                        // handle image deletion errors
-                        imageRef.delete().catch(err => console.warn("Image deletion warning:", err));
+                        // This line ensures the delete logic works for BOTH old and new listings.
+                        const imagesToDelete = listingData.imageUrls || [listingData.imageUrl];
                         
-                        db.collection('listings').doc(listingId).delete().then(() => {
-                            alert('Listing deleted successfully.');
-                            document.getElementById('home-link').click(); // Go home after deleting
-                        }).catch(err => console.error("Error deleting document:", err));
+                        const deletePromises = imagesToDelete.map(url => {
+                            // A check to prevent errors if a URL is somehow invalid
+                            if (url) return storage.refFromURL(url).delete();
+                            return Promise.resolve(); // Return a resolved promise for invalid URLs
+                        });
+
+                        Promise.allSettled(deletePromises)
+                            .then(results => {
+                                results.forEach((result, index) => {
+                                    if (result.status === 'rejected') {
+                                        console.warn(`Failed to delete image ${index + 1}:`, result.reason);
+                                    }
+                                });
+                                // Then, delete the Firestore document
+                                db.collection('listings').doc(listingId).delete().then(() => {
+                                    alert('Listing deleted successfully.');
+                                    document.getElementById('home-link').click();
+                                }).catch(err => {
+                                    console.error("Error deleting document:", err)
+                                    alert("Could not delete listing data. Please try again.");
+                                });
+                            });
                     }
                 });
             }
@@ -501,12 +548,12 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
 }
 
 
-// --- FUNCTION TO ADD LISTING FORM LISTENER (UPDATED WITH NEW SECURITY CHECK) ---
+// --- FUNCTION TO ADD LISTING FORM LISTENER ---
 function addListingFormListener(auth, db, storage) {
     const listingForm = document.getElementById('create-listing-form');
+    if (!listingForm) return;
     const user = auth.currentUser;
 
-    // Get all the new/modified elements
     const formError = document.getElementById('form-error');
     const submitBtn = document.getElementById('submit-listing-btn');
     const cancelBtn = document.getElementById('cancel-listing-btn');
@@ -514,13 +561,41 @@ function addListingFormListener(auth, db, storage) {
     const progressBar = document.getElementById('upload-progress-bar');
     const progressLabel = document.getElementById('progress-label');
 
-    listingForm.addEventListener('submit', async (e) => { // Make the event listener async
+    const imageInput = document.getElementById('listing-image');
+    const previewContainer = document.getElementById('image-preview-container');
+
+    imageInput.addEventListener('change', (event) => {
+        // Clear previous previews and errors
+        previewContainer.innerHTML = '';
+        formError.textContent = '';
+        const files = event.target.files;
+
+        // Validate file count
+        if (files.length > 4) {
+            formError.textContent = "You can only select a maximum of 4 images.";
+            // Clear the file input to prevent submission of too many files
+            imageInput.value = ''; 
+            return;
+        }
+
+        // Loop through selected files and create previews
+        for (const file of files) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.classList.add('preview-thumbnail');
+                previewContainer.appendChild(img);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    listingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // -- NEW, ROBUST SECURITY CHECK --
-        // check for the custom Firestore flag here as well.
-        if (!user) return; // Should not happen, but a safeguard edge case
-
+        // Security check remains the same
+        if (!user) return;
         try {
             const userDocRef = db.collection('users').doc(user.uid);
             const userDoc = await userDocRef.get({ source: 'server' });
@@ -528,7 +603,7 @@ function addListingFormListener(auth, db, storage) {
 
             if (!isFullyVerified) {
                 formError.textContent = "Error: You must be a fully verified user to create a listing.";
-                return; // Stop the function if not fully verified
+                return;
             }
         } catch (error) {
             console.error("Verification check failed:", error);
@@ -536,94 +611,96 @@ function addListingFormListener(auth, db, storage) {
             return;
         }
 
-        // --- If the check passes, the rest of the function proceeds as normal ---
         const title = document.getElementById('listing-title').value;
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
-        const imageFile = document.getElementById('listing-image').files[0];
+        
+        // Get the list of files from the input.
+        const imageFiles = document.getElementById('listing-image').files;
 
-        if (!imageFile) {
-            formError.textContent = "Please select an image.";
+        // MODIFIED: Validation now checks the number of selected files.
+        if (!imageFiles || imageFiles.length === 0) {
+            formError.textContent = "Please select at least one image.";
+            return;
+        }
+        if (imageFiles.length > 4) {
+            formError.textContent = "You can only upload a maximum of 4 images.";
             return;
         }
 
-        // --- START UPLOAD PROCESS ---
-        // Disable buttons and show the progress bar
         submitBtn.disabled = true;
         cancelBtn.disabled = true;
         progressContainer.style.display = 'block';
         formError.textContent = '';
 
-        // 1. Upload Image to Firebase Storage
-        const filePath = `listings/${user.uid}/${Date.now()}_${imageFile.name}`;
-        const fileRef = storage.ref(filePath);
-        const uploadTask = fileRef.put(imageFile);
+        // Create an array of upload promises, one for each file.
+        const uploadPromises = Array.from(imageFiles).map((file, index) => {
+            const filePath = `listings/${user.uid}/${Date.now()}_${file.name}`;
+            const fileRef = storage.ref(filePath);
+            const uploadTask = fileRef.put(file);
 
-        uploadTask.on('state_changed',
-            (snapshot) => {
-                // --- UPDATE PROGRESS BAR ---
-                const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                progressBar.value = progress;
-                progressLabel.textContent = `Uploading... ${Math.round(progress)}%`;
-            },
-            (error) => {
-                // --- HANDLE ERRORS ---
-                console.error("Upload failed:", error);
-                formError.textContent = "Image upload failed. Please try again.";
-                // Re-enable buttons and hide progress bar on failure
-                submitBtn.disabled = false;
-                cancelBtn.disabled = false;
-                progressContainer.style.display = 'none';
-            },
-            () => {
-                // --- HANDLE SUCCESS ---
-                progressLabel.textContent = 'Processing...'; // Feedback for the final step
+            // Return a new promise for each upload
+            return new Promise((resolve, reject) => {
+                uploadTask.on('state_changed',
+                    (snapshot) => {
+                        // Update progress bar for the *current* file being uploaded
+                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                        progressBar.value = progress;
+                        progressLabel.textContent = `Uploading image ${index + 1} of ${imageFiles.length}... ${Math.round(progress)}%`;
+                    },
+                    (error) => {
+                        // If an upload fails, reject the promise
+                        console.error("Upload failed:", error);
+                        reject(error);
+                    },
+                    () => {
+                        // When an upload is complete, get its URL and resolve the promise
+                        uploadTask.snapshot.ref.getDownloadURL().then(resolve).catch(reject);
+                    }
+                );
+            });
+        });
 
-                // 2. Get Image URL after upload
-                uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
-                    // 3. Save Listing to Firestore
-                    db.collection("listings").add({
-                        title: title,
-                        title_lowercase: title.toLowerCase(),
-                        title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean),
-                        description: description,
-                        price: Number(price),
-                        imageUrl: downloadURL,
-                        sellerId: user.uid,
-                        sellerEmail: user.email,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    }).then(() => {
-                        alert('Listing created successfully!');
-                        // Go back to welcome screen
-                        appContent.innerHTML = welcomeHTML(user); 
-                        document.getElementById('create-listing-btn').addEventListener('click', () => {
-                            appContent.innerHTML = createListingHTML;
-                            addListingFormListener(auth, db, storage);
-                        });
-                        // Refresh listings on the main page
-                        loadAllListings(auth, db, storage); 
-                    }).catch(error => {
-                        console.error("Error adding document: ", error);
-                        formError.textContent = "Failed to save listing.";
-                        // Re-enable buttons and hide progress on failure
-                        submitBtn.disabled = false;
-                        cancelBtn.disabled = false;
-                        progressContainer.style.display = 'none';                    
-                    });
-                });
-            }
-        );
+        // --- SAVE AFTER ALL UPLOADS ARE DONE ---
+        try {
+            // Wait for all upload promises to resolve.
+            const downloadURLs = await Promise.all(uploadPromises);
+
+            // Save the listing to Firestore with the array of image URLs.
+            await db.collection("listings").add({
+                title: title,
+                title_lowercase: title.toLowerCase(),
+                title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean),
+                description: description,
+                price: Number(price),
+                imageUrls: downloadURLs, // MODIFIED: Use `imageUrls` (plural) to store the array
+                sellerId: user.uid,
+                sellerEmail: user.email,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            alert('Listing created successfully!');
+            document.getElementById('home-link').click();
+
+        } catch (error) {
+            // This block will run if any of the uploads fail.
+            formError.textContent = "An image failed to upload. Please try again.";
+            submitBtn.disabled = false;
+            cancelBtn.disabled = false;
+            progressContainer.style.display = 'none';
+        }
     });
     
     document.getElementById('cancel-listing-btn').addEventListener('click', () => {
         appContent.innerHTML = welcomeHTML(user);
-        // Re-attach the listener for the create button after returning to the welcome screen
         document.getElementById('create-listing-btn').addEventListener('click', () => {
             appContent.innerHTML = createListingHTML;
             addListingFormListener(auth, db, storage);
         });
     });
 }
+
+
 // --FUNCTION FOR FETCHING SPECIFIC LISTING DATA FROM FIRESTORE TO DISPLAY--
 function addCardEventListeners(auth, db, storage) {
     const viewDetailsButtons = document.querySelectorAll('.view-details-btn');
