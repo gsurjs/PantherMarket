@@ -77,11 +77,21 @@ const createListingHTML = `
 `;
 
 const listingCardHTML = (listing, id) => {
-    // Use the optimized thumbnail URL, or a placeholder if it's still processing
-    const imageUrl = listing.processedImageUrls ? listing.processedImageUrls.thumb : "https://via.placeholder.com/400x400.png?text=Processing...";
-    
-    // Only show listings that are active
-    if (listing.status !== 'active' && !listing.processedImageUrls) return '';
+    // 1. If a listing is actively processing, hide it. Otherwise, show it.
+    if (listing.status === 'processing') return '';
+
+    // 2. Determine the correct image URL to use (new format first, then fallback to old format)
+    let imageUrl;
+    if (listing.processedImageUrls) {
+        // Use the new, optimized thumbnail
+        imageUrl = listing.processedImageUrls.thumb;
+    } else if (listing.imageUrls && listing.imageUrls.length > 0) {
+        // Fallback to the first image from the old array structure
+        imageUrl = listing.imageUrls[0];
+    } else {
+        // A final fallback to a placeholder if no images are found
+        imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
+    }
 
     return `
     <div class="listing-card" data-id="${id}">
@@ -96,8 +106,18 @@ const listingCardHTML = (listing, id) => {
 };
 
 const itemDetailsHTML = (listing, isOwner) => {
-    // Use the optimized large URL
-    const largeImageUrl = listing.processedImageUrls ? listing.processedImageUrls.large : "https://via.placeholder.com/1280x1280.png?text=Processing...";
+    // Determine the correct large image URL to use (new vs. old)
+    let largeImageUrl;
+    if (listing.processedImageUrls) {
+        // Use the new, optimized large image
+        largeImageUrl = listing.processedImageUrls.large;
+    } else if (listing.imageUrls && listing.imageUrls.length > 0) {
+        // Fallback to the first image from the old array structure
+        largeImageUrl = listing.imageUrls[0];
+    } else {
+        // A final fallback
+        largeImageUrl = "https://via.placeholder.com/1280x1280.png?text=No+Image";
+    }
 
     return `
     <div class="item-details">
@@ -107,7 +127,7 @@ const itemDetailsHTML = (listing, isOwner) => {
             <div class="main-image-container">
                 <img id="main-gallery-image" src="${largeImageUrl}" alt="${listing.title}">
             </div>
-            </div>
+        </div>
         <p class="price">$${listing.price}</p>
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
