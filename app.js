@@ -80,19 +80,24 @@ const listingCardHTML = (listing, id) => {
     // Hide listings that are still processing
     if (listing.status === 'processing') return '';
 
-    // Determine the correct image URL, checking all possible data structures
+    // Determine the correct image URL - updated to handle new processedImages array
     let imageUrl;
-    if (listing.processedImageUrls) {
-        // 1. Use the new, optimized thumbnail if it exists
+    
+    // NEW: Check for the new processedImages array structure
+    if (listing.processedImages && listing.processedImages.length > 0) {
+        // Use the first processed thumbnail
+        imageUrl = listing.processedImages[0].thumb;
+    } else if (listing.processedImageUrls) {
+        // Old single-image processed structure
         imageUrl = listing.processedImageUrls.thumb;
     } else if (listing.imageUrls && listing.imageUrls.length > 0) {
-        // 2. Fallback to the multi-image array
+        // Fallback to original multi-image array
         imageUrl = listing.imageUrls[0];
     } else if (listing.imageUrl) {
-        // 3. ADDED: Fallback to the original single image string
+        // Fallback to original single image string
         imageUrl = listing.imageUrl;
     } else {
-        // 4. A final fallback to a placeholder
+        // Final fallback to placeholder
         imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
     }
 
@@ -111,11 +116,16 @@ const listingCardHTML = (listing, id) => {
 const itemDetailsHTML = (listing, isOwner) => {
     // Create a unified 'images' array from all possible data structures
     let images = [];
-    if (listing.processedImageUrls) {
-        // New listings have only one primary image
+    
+    // NEW: Handle the new processedImages array structure
+    if (listing.processedImages && listing.processedImages.length > 0) {
+        // New listings with multiple processed images
+        images = listing.processedImages.map(img => img.large);
+    } else if (listing.processedImageUrls) {
+        // Old single processed image structure
         images = [listing.processedImageUrls.large];
     } else if (listing.imageUrls && listing.imageUrls.length > 0) {
-        // Old listings with multiple images
+        // Old listings with multiple unprocessed images
         images = listing.imageUrls;
     } else if (listing.imageUrl) {
         // Very old listings with a single image
@@ -284,7 +294,6 @@ function setupAuthListener(auth, db, storage) {
                         document.getElementById('home-link').click();
                     }
                 } else {
-                    // Default to the home view
                     // Default to the home view
                     renderWelcomeView(user, auth, db, storage);
                 }
@@ -515,15 +524,38 @@ function showItemDetails(auth, db, storage, listingId) {
                     addEditFormListener(auth, db, storage, listingId);
                 });
 
-               document.getElementById('delete-listing-btn').addEventListener('click', () => {
+                document.getElementById('delete-listing-btn').addEventListener('click', () => {
                     if (confirm('Are you sure you want to delete this listing?')) {
-                        // This line ensures the delete logic works for BOTH old and new listings.
-                        const imagesToDelete = listingData.imageUrls || [listingData.imageUrl];
+                        // Updated delete logic to handle all data structures
+                        let imagesToDelete = [];
+                        
+                        // Handle new processedImages structure
+                        if (listingData.processedImages && listingData.processedImages.length > 0) {
+                            // For new structure, we need to delete both thumb and large versions
+                            listingData.processedImages.forEach(img => {
+                                if (img.thumb) imagesToDelete.push(img.thumb);
+                                if (img.large) imagesToDelete.push(img.large);
+                            });
+                        } else if (listingData.processedImageUrls) {
+                            // Handle old single processed image structure
+                            if (listingData.processedImageUrls.thumb) imagesToDelete.push(listingData.processedImageUrls.thumb);
+                            if (listingData.processedImageUrls.large) imagesToDelete.push(listingData.processedImageUrls.large);
+                        } else if (listingData.imageUrls) {
+                            // Handle old multi-image array
+                            imagesToDelete = listingData.imageUrls;
+                        } else if (listingData.imageUrl) {
+                            // Handle very old single image
+                            imagesToDelete = [listingData.imageUrl];
+                        }
                         
                         const deletePromises = imagesToDelete.map(url => {
-                            // A check to prevent errors if a URL is somehow invalid
-                            if (url) return storage.refFromURL(url).delete();
-                            return Promise.resolve(); // Return a resolved promise for invalid URLs
+                            if (url) {
+                                return storage.refFromURL(url).delete().catch(err => {
+                                    console.warn(`Failed to delete image: ${err.message}`);
+                                    return Promise.resolve(); // Continue even if image deletion fails
+                                });
+                            }
+                            return Promise.resolve();
                         });
 
                         Promise.allSettled(deletePromises)
@@ -538,7 +570,7 @@ function showItemDetails(auth, db, storage, listingId) {
                                     alert('Listing deleted successfully.');
                                     document.getElementById('home-link').click();
                                 }).catch(err => {
-                                    console.error("Error deleting document:", err)
+                                    console.error("Error deleting document:", err);
                                     alert("Could not delete listing data. Please try again.");
                                 });
                             });
