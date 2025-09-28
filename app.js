@@ -76,20 +76,39 @@ const createListingHTML = `
     <p id="form-error" class="error"></p>
 `;
 
-const listingCardHTML = (listing, id) => `
+const listingCardHTML = (listing, id) => {
+    if (listing.status !== 'active') return '';
+
+    let imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
+    // --- UPDATED LINE ---
+    // Now checks that the 'thumb' property itself exists before using it
+    if (listing.processedImages && listing.processedImages.length > 0 && listing.processedImages[0].thumb) {
+        imageUrl = listing.processedImages[0].thumb;
+    }
+
+    return `
     <div class="listing-card" data-id="${id}">
-        <img src="${(listing.imageUrls && listing.imageUrls[0]) || listing.imageUrl}" alt="${listing.title}">
+        <img src="${imageUrl}" alt="${listing.title}">
         <div class="listing-card-info">
             <h3>${listing.title}</h3>
             <p>$${listing.price}</p>
             <button class="view-details-btn">View Details</button>
         </div>
     </div>
-`;
+    `;
+};
 
 const itemDetailsHTML = (listing, isOwner) => {
-    // This line creates an array of images, whether the source is a single URL or an array of URLs.
-    const images = listing.imageUrls || [listing.imageUrl];
+    let images = ["https://via.placeholder.com/1280x1280.png?text=No+Image"];
+    
+    if (listing.processedImages && listing.processedImages.length > 0) {
+        // Maps over the images, then filters out any undefined or null URLs
+        const validImages = listing.processedImages.map(img => img.large).filter(Boolean);
+
+        if (validImages.length > 0) {
+            images = validImages;
+        }
+    }
 
     return `
     <div class="item-details">
@@ -99,6 +118,7 @@ const itemDetailsHTML = (listing, isOwner) => {
             <div class="main-image-container">
                 <img id="main-gallery-image" src="${images[0]}" alt="${listing.title}">
             </div>
+            
             ${images.length > 1 ? `
                 <div class="thumbnail-container">
                     ${images.map((url, index) => `
@@ -107,6 +127,7 @@ const itemDetailsHTML = (listing, isOwner) => {
                 </div>
             ` : ''}
         </div>
+        
         <p class="price">$${listing.price}</p>
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
@@ -248,7 +269,6 @@ function setupAuthListener(auth, db, storage) {
                         document.getElementById('home-link').click();
                     }
                 } else {
-                    // Default to the home view
                     // Default to the home view
                     renderWelcomeView(user, auth, db, storage);
                 }
@@ -451,16 +471,18 @@ function showItemDetails(auth, db, storage, listingId) {
             appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
 
             const mainImage = document.getElementById('main-gallery-image');
-            if (mainImage) {
-                 const thumbnails = document.querySelectorAll('.thumbnail-image');
-                 thumbnails.forEach(thumbnail => {
-                    thumbnail.addEventListener('click', () => {
-                        mainImage.src = thumbnail.src;
-                        thumbnails.forEach(t => t.classList.remove('active'));
-                        thumbnail.classList.add('active');
-                    });
+            const thumbnails = document.querySelectorAll('.thumbnail-image');
+            
+            thumbnails.forEach(thumbnail => {
+                thumbnail.addEventListener('click', () => {
+                    // Update the main image source
+                    mainImage.src = thumbnail.src;
+                    
+                    // Update the 'active' class for styling
+                    thumbnails.forEach(t => t.classList.remove('active'));
+                    thumbnail.classList.add('active');
                 });
-            }
+            });
 
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');
@@ -477,15 +499,38 @@ function showItemDetails(auth, db, storage, listingId) {
                     addEditFormListener(auth, db, storage, listingId);
                 });
 
-               document.getElementById('delete-listing-btn').addEventListener('click', () => {
+                document.getElementById('delete-listing-btn').addEventListener('click', () => {
                     if (confirm('Are you sure you want to delete this listing?')) {
-                        // This line ensures the delete logic works for BOTH old and new listings.
-                        const imagesToDelete = listingData.imageUrls || [listingData.imageUrl];
+                        // Updated delete logic to handle all data structures
+                        let imagesToDelete = [];
+                        
+                        // Handle new processedImages structure
+                        if (listingData.processedImages && listingData.processedImages.length > 0) {
+                            // For new structure, we need to delete both thumb and large versions
+                            listingData.processedImages.forEach(img => {
+                                if (img.thumb) imagesToDelete.push(img.thumb);
+                                if (img.large) imagesToDelete.push(img.large);
+                            });
+                        } else if (listingData.processedImageUrls) {
+                            // Handle old single processed image structure
+                            if (listingData.processedImageUrls.thumb) imagesToDelete.push(listingData.processedImageUrls.thumb);
+                            if (listingData.processedImageUrls.large) imagesToDelete.push(listingData.processedImageUrls.large);
+                        } else if (listingData.imageUrls) {
+                            // Handle old multi-image array
+                            imagesToDelete = listingData.imageUrls;
+                        } else if (listingData.imageUrl) {
+                            // Handle very old single image
+                            imagesToDelete = [listingData.imageUrl];
+                        }
                         
                         const deletePromises = imagesToDelete.map(url => {
-                            // A check to prevent errors if a URL is somehow invalid
-                            if (url) return storage.refFromURL(url).delete();
-                            return Promise.resolve(); // Return a resolved promise for invalid URLs
+                            if (url) {
+                                return storage.refFromURL(url).delete().catch(err => {
+                                    console.warn(`Failed to delete image: ${err.message}`);
+                                    return Promise.resolve(); // Continue even if image deletion fails
+                                });
+                            }
+                            return Promise.resolve();
                         });
 
                         Promise.allSettled(deletePromises)
@@ -500,7 +545,7 @@ function showItemDetails(auth, db, storage, listingId) {
                                     alert('Listing deleted successfully.');
                                     document.getElementById('home-link').click();
                                 }).catch(err => {
-                                    console.error("Error deleting document:", err)
+                                    console.error("Error deleting document:", err);
                                     alert("Could not delete listing data. Please try again.");
                                 });
                             });
@@ -565,25 +610,12 @@ function addListingFormListener(auth, db, storage) {
     const imageInput = document.getElementById('listing-image');
     const previewContainer = document.getElementById('image-preview-container');
 
-    if (!window.currentListingFiles) {
-        window.currentListingFiles = [];
-    }
-
     // Array to store all selected files for upload.
-    let filesToUpload = window.currentListingFiles;
-
-    filesToUpload.length = 0;
+    let filesToUpload = [];
     
-    // Check if there are existing previews (from previous navigation) and clear them
-    if (previewContainer) {
-        previewContainer.innerHTML = '';
-    }
-
-    // Helper function to render the previews
+    // Helper function to render the previews (This remains the same)
     const renderPreviews = () => {
         previewContainer.innerHTML = '';
-        console.log('Rendering previews for', filesToUpload.length, 'files');
-        
         filesToUpload.forEach((file, index) => {
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -600,7 +632,6 @@ function addListingFormListener(auth, db, storage) {
                 removeBtn.type = 'button';
                 removeBtn.onclick = () => {
                     filesToUpload.splice(index, 1);
-                    console.log('File removed, remaining files:', filesToUpload.length);
                     renderPreviews();
                 };
 
@@ -612,48 +643,34 @@ function addListingFormListener(auth, db, storage) {
         });
     };
 
+    // Event listener for file input changes (This remains the same)
     imageInput.addEventListener('change', (event) => {
         formError.textContent = '';
         const newFiles = Array.from(event.target.files);
-        
-        console.log('Change event fired. Files selected:', newFiles.length);
-        console.log('Files before adding:', filesToUpload.length);
-
         for (const file of newFiles) {
             if (filesToUpload.length < 4) {
                 filesToUpload.push(file);
-                console.log('Added file:', file.name);
             } else {
                 formError.textContent = "You can only select a maximum of 4 images.";
                 break;
             }
         }
-        
-        console.log('Files after adding:', filesToUpload.length);
-        console.log('File array contents:', filesToUpload);
         renderPreviews();
-        // Don't clear the input value - this might be useful for debugging
-        // imageInput.value = '';
     });
 
+    // Main form submission logic with the new workflow
     listingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        console.log('=== FORM SUBMISSION ===');
-        console.log('Files in array:', filesToUpload);
-        console.log('Number of files:', filesToUpload.length);
-        console.log('Array is empty?', filesToUpload.length === 0);
 
+        // --- All validation logic remains the same ---
         if (!user) {
-            console.error('No user logged in');
+            formError.textContent = "You must be logged in to create a listing.";
             return;
         }
-        
         try {
             const userDocRef = db.collection('users').doc(user.uid);
             const userDoc = await userDocRef.get({ source: 'server' });
             const isFullyVerified = user.emailVerified && userDoc.exists && userDoc.data().isManuallyVerified;
-
             if (!isFullyVerified) {
                 formError.textContent = "Error: You must be a fully verified user to create a listing.";
                 return;
@@ -663,90 +680,85 @@ function addListingFormListener(auth, db, storage) {
             formError.textContent = "Error: Could not confirm user verification status.";
             return;
         }
-
         const title = document.getElementById('listing-title').value;
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
-        
-        console.log('Form values:', { title, description, price });
-        
-        // Use the filesToUpload array directly
         if (filesToUpload.length === 0) {
             formError.textContent = "Please select at least one image.";
-            console.error('File validation failed: No files in array');
             return;
         }
-        if (filesToUpload.length > 4) {
-            formError.textContent = "You can only upload a maximum of 4 images.";
-            return;
-        }
-
-        console.log('Starting upload for', filesToUpload.length, 'files');
 
         submitBtn.disabled = true;
         cancelBtn.disabled = true;
         progressContainer.style.display = 'block';
         formError.textContent = '';
 
-        const uploadPromises = filesToUpload.map((file, index) => {
-            const filePath = `listings/${user.uid}/${Date.now()}_${index}_${file.name}`;
-            const fileRef = storage.ref(filePath);
-            const uploadTask = fileRef.put(file);
-
-            return new Promise((resolve, reject) => {
-                uploadTask.on('state_changed',
-                    (snapshot) => {
-                        const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-                        progressBar.value = progress;
-                        progressLabel.textContent = `Uploading image ${index + 1} of ${filesToUpload.length}... ${Math.round(progress)}%`;
-                    },
-                    (error) => {
-                        console.error("Upload failed for file", index, ":", error);
-                        reject(error);
-                    },
-                    () => {
-                        uploadTask.snapshot.ref.getDownloadURL().then(resolve).catch(reject);
-                    }
-                );
-            });
-        });
+        let docRef = null;
 
         try {
-            const downloadURLs = await Promise.all(uploadPromises);
-            console.log('All uploads complete. URLs:', downloadURLs);
+            // --- NEW WORKFLOW STARTS HERE ---
 
-            await db.collection("listings").add({
+            // 1. Create a placeholder document in Firestore first to get a unique ID.
+            docRef = await db.collection("listings").add({
                 title: title,
                 title_lowercase: title.toLowerCase(),
                 title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean),
                 description: description,
                 price: Number(price),
-                imageUrls: downloadURLs,
                 sellerId: user.uid,
                 sellerEmail: user.email,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                status: "processing", // Mark status as processing
+                totalImages: filesToUpload.length 
             });
 
-            alert('Listing created successfully!');
-            // Clear the filesToUpload array after successful submission
-            filesToUpload.length = 0;
-            window.currentListingFiles = [];
-            document.getElementById('home-link').click();
+            // 2. Map over all selected files to create the upload promises.
+            const uploadPromises = filesToUpload.map((file, index) => {
+                // Use the new document's ID to create a unique storage path for each image.
+                const filePath = `listings/${user.uid}/${docRef.id}/${Date.now()}_${file.name}`;
+                const fileRef = storage.ref(filePath);
+                const uploadTask = fileRef.put(file);
+
+                // Return a new promise that resolves when the upload is complete
+                return new Promise((resolve, reject) => {
+                    uploadTask.on('state_changed',
+                        (snapshot) => {
+                            // This will update the progress bar for each file sequentially
+                            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                            progressBar.value = progress;
+                            progressLabel.textContent = `Uploading image ${index + 1} of ${filesToUpload.length}... ${Math.round(progress)}%`;
+                        },
+                        (error) => reject(error), // Reject the promise on error
+                        () => resolve() // Resolve the promise on success
+                    );
+                });
+            });
+
+            // 3. Wait for all file uploads to complete.
+            await Promise.all(uploadPromises);
+
+            // 4. The frontend's job is now done. The backend Cloud Function will
+            // automatically process the images and update the Firestore document.
+            alert('Listing submitted! Images are being processed and will appear shortly.');
+            filesToUpload = []; // Clear the file array
+            document.getElementById('home-link').click(); // Navigate back to the home page
 
         } catch (error) {
-            console.error("Upload/database error:", error);
-            formError.textContent = "An error occurred. Please try again.";
+            console.error("Error during listing creation:", error);
+            formError.textContent = "An error occurred during upload. Please try again.";
+            if (docRef) {
+                await db.collection("listings").doc(docRef.id).delete();
+                console.log("Rollback successful: Deleted incomplete Firestore document.");
+            }
             submitBtn.disabled = false;
             cancelBtn.disabled = false;
             progressContainer.style.display = 'none';
         }
     });
     
-    // Cancel button listener
+    // Cancel button listener (This remains the same)
     cancelBtn.addEventListener('click', () => {
-        // Clear the files when canceling
-        filesToUpload.length = 0;
-        window.currentListingFiles = [];
+        filesToUpload = [];
         renderWelcomeView(user, auth, db, storage);
     });
 }
