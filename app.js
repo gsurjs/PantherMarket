@@ -732,7 +732,6 @@ function addListingFormListener(auth, db, storage) {
                 sellerEmail: user.email,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 status: "processing" // Mark status as processing
-                totalImages: filesToUpload.length
             });
 
             // 2. Map over all selected files to create the upload promises.
