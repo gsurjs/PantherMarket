@@ -693,11 +693,13 @@ function addListingFormListener(auth, db, storage) {
         progressContainer.style.display = 'block';
         formError.textContent = '';
 
+        let docRef = null;
+
         try {
             // --- NEW WORKFLOW STARTS HERE ---
 
             // 1. Create a placeholder document in Firestore first to get a unique ID.
-            const docRef = await db.collection("listings").add({
+            docRef = await db.collection("listings").add({
                 title: title,
                 title_lowercase: title.toLowerCase(),
                 title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean),
