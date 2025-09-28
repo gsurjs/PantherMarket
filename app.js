@@ -732,6 +732,7 @@ function addListingFormListener(auth, db, storage) {
                 sellerEmail: user.email,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 status: "processing" // Mark status as processing
+                totalImages: filesToUpload.length
             });
 
             // 2. Map over all selected files to create the upload promises.
@@ -768,7 +769,10 @@ function addListingFormListener(auth, db, storage) {
         } catch (error) {
             console.error("Error during listing creation:", error);
             formError.textContent = "An error occurred during upload. Please try again.";
-            // Consider adding logic here to delete the placeholder Firestore document on failure.
+            if (docRef) {
+                await db.collection("listings").doc(docRef.id).delete();
+                console.log("Rollback successful: Deleted incomplete Firestore document.");
+            }
             submitBtn.disabled = false;
             cancelBtn.disabled = false;
             progressContainer.style.display = 'none';
