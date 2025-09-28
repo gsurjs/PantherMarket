@@ -64,6 +64,9 @@ const createListingHTML = `
         <label for="listing-image">Upload Images (Up to 4):</label>
         <input type="file" id="listing-image" accept="image/*" multiple required>
 
+        <button type="button" id="analyze-image-btn" class="ai-button" disabled>✨ Get AI Suggestions</button>
+        <p id="ai-status" class="form-status"></p>
+
         <div id="image-preview-container"></div>
 
         <button type="submit" id="submit-listing-btn">Submit Listing</button>
@@ -610,6 +613,10 @@ function addListingFormListener(auth, db, storage) {
     const imageInput = document.getElementById('listing-image');
     const previewContainer = document.getElementById('image-preview-container');
 
+    // --- AI button and status elements ---
+    const analyzeBtn = document.getElementById('analyze-image-btn');
+    const aiStatus = document.getElementById('ai-status');
+
     // Array to store all selected files for upload.
     let filesToUpload = [];
     
@@ -633,6 +640,7 @@ function addListingFormListener(auth, db, storage) {
                 removeBtn.onclick = () => {
                     filesToUpload.splice(index, 1);
                     renderPreviews();
+                    analyzeBtn.disabled = filesToUpload.length === 0;
                 };
 
                 previewWrapper.appendChild(img);
@@ -656,6 +664,61 @@ function addListingFormListener(auth, db, storage) {
             }
         }
         renderPreviews();
+        analyzeBtn.disabled = filesToUpload.length === 0;
+    });
+
+    // --- Event listener for the "Get AI Suggestions" button ---
+    analyzeBtn.addEventListener('click', async () => {
+        if (filesToUpload.length === 0) {
+            formError.textContent = "Please select an image first.";
+            return;
+        }
+
+        const fileToAnalyze = filesToUpload[0]; // Always analyze the first image
+        aiStatus.textContent = "Analyzing, please wait...";
+        aiStatus.style.color = '#333';
+        analyzeBtn.disabled = true;
+
+        const reader = new FileReader();
+        reader.readAsDataURL(fileToAnalyze);
+        reader.onload = async () => {
+            try {
+                // Remove the data URL prefix 
+                const base64Image = reader.result.split(',')[1];
+                
+                // Initialize the Cloud Function callable
+                const functions = firebase.functions();
+                const analyzeImage = functions.httpsCallable('analyzeImageForSuggestions');
+
+                // Call the function and await the result
+                const result = await analyzeImage({ image: base64Image });
+
+                // Populate form fields with the suggestions
+                document.getElementById('listing-title').value = result.data.title || '';
+                document.getElementById('listing-desc').value = result.data.description || '';
+                
+                aiStatus.textContent = "✅ Suggestions loaded!";
+                aiStatus.style.color = 'green';
+
+            } catch (error) {
+                console.error("Error calling analyzeImage function:", error);
+                aiStatus.textContent = `❌ Error: ${error.message}`;
+                aiStatus.style.color = 'red';
+                // If inappropriate, remove the bad image and re-render
+                if (error.code === 'permission-denied') {
+                    filesToUpload.shift(); // Removes the first item
+                    renderPreviews();
+                }
+            } finally {
+                analyzeBtn.disabled = filesToUpload.length === 0; // Re-enable if images still exist
+            }
+        };
+        reader.onerror = (error) => {
+             console.error("File reading error:", error);
+             aiStatus.textContent = "❌ Error: Could not read the image file.";
+             aiStatus.style.color = 'red';
+             analyzeBtn.disabled = false;
+        };
     });
 
     // Main form submission logic with the new workflow
