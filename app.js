@@ -77,28 +77,13 @@ const createListingHTML = `
 `;
 
 const listingCardHTML = (listing, id) => {
-    // Hide listings that are still processing
-    if (listing.status === 'processing') return '';
+    if (listing.status !== 'active') return '';
 
-    // Determine the correct image URL - updated to handle new processedImages array
-    let imageUrl;
-    
-    // NEW: Check for the new processedImages array structure
-    if (listing.processedImages && listing.processedImages.length > 0) {
-        // Use the first processed thumbnail
+    let imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
+    // --- UPDATED LINE ---
+    // Now checks that the 'thumb' property itself exists before using it
+    if (listing.processedImages && listing.processedImages.length > 0 && listing.processedImages[0].thumb) {
         imageUrl = listing.processedImages[0].thumb;
-    } else if (listing.processedImageUrls) {
-        // Old single-image processed structure
-        imageUrl = listing.processedImageUrls.thumb;
-    } else if (listing.imageUrls && listing.imageUrls.length > 0) {
-        // Fallback to original multi-image array
-        imageUrl = listing.imageUrls[0];
-    } else if (listing.imageUrl) {
-        // Fallback to original single image string
-        imageUrl = listing.imageUrl;
-    } else {
-        // Final fallback to placeholder
-        imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
     }
 
     return `
@@ -114,25 +99,15 @@ const listingCardHTML = (listing, id) => {
 };
 
 const itemDetailsHTML = (listing, isOwner) => {
-    // Create a unified 'images' array from all possible data structures
-    let images = [];
+    let images = ["https://via.placeholder.com/1280x1280.png?text=No+Image"];
     
-    // NEW: Handle the new processedImages array structure
     if (listing.processedImages && listing.processedImages.length > 0) {
-        // New listings with multiple processed images
-        images = listing.processedImages.map(img => img.large);
-    } else if (listing.processedImageUrls) {
-        // Old single processed image structure
-        images = [listing.processedImageUrls.large];
-    } else if (listing.imageUrls && listing.imageUrls.length > 0) {
-        // Old listings with multiple unprocessed images
-        images = listing.imageUrls;
-    } else if (listing.imageUrl) {
-        // Very old listings with a single image
-        images = [listing.imageUrl];
-    } else {
-        // Fallback
-        images = ["https://via.placeholder.com/1280x1280.png?text=No+Image"];
+        // Maps over the images, then filters out any undefined or null URLs
+        const validImages = listing.processedImages.map(img => img.large).filter(Boolean);
+
+        if (validImages.length > 0) {
+            images = validImages;
+        }
     }
 
     return `
