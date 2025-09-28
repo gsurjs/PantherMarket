@@ -708,7 +708,7 @@ function addListingFormListener(auth, db, storage) {
                 sellerId: user.uid,
                 sellerEmail: user.email,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                status: "processing" // Mark status as processing
+                status: "processing", // Mark status as processing
                 totalImages: filesToUpload.length 
             });
 
