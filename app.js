@@ -714,7 +714,7 @@ function addListingFormListener(auth, db, storage) {
             // 2. Map over all selected files to create the upload promises.
             const uploadPromises = filesToUpload.map((file, index) => {
                 // Use the new document's ID to create a unique storage path for each image.
-                const filePath = `listings/${docRef.id}/${Date.now()}_${file.name}`;
+                const filePath = `listings/${user.uid}/${docRef.id}/${Date.now()}_${file.name}`;
                 const fileRef = storage.ref(filePath);
                 const uploadTask = fileRef.put(file);
 
