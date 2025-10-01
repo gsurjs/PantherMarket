@@ -627,57 +627,63 @@ function addListingFormListener(auth, db, storage) {
     
     // Enhanced renderPreviews function with drag and drop support
     const renderPreviews = () => {
-        previewContainer.innerHTML = '';
+        previewContainer.innerHTML = ''; // Clear the container first
+
+        // This loop creates the structure for each preview immediately and in order.
         filesToUpload.forEach((file, index) => {
+            // 1. CREATE THE PREVIEW STRUCTURE SYNCHRONOUSLY
+            const previewWrapper = document.createElement('div');
+            previewWrapper.classList.add('preview-wrapper');
+            previewWrapper.draggable = true;
+            previewWrapper.dataset.index = index;
+
+            const dragHandle = document.createElement('div');
+            dragHandle.classList.add('drag-handle');
+            dragHandle.innerHTML = '⋮⋮';
+
+            const img = document.createElement('img');
+            img.classList.add('preview-thumbnail');
+            // We create the img tag, but we don't set its src yet.
+
+            const removeBtn = document.createElement('button');
+            removeBtn.classList.add('remove-preview-btn');
+            removeBtn.textContent = 'X';
+            removeBtn.type = 'button';
+            removeBtn.onclick = () => {
+                filesToUpload.splice(index, 1);
+                renderPreviews(); // Re-render after removal
+                analyzeBtn.disabled = filesToUpload.length === 0;
+            };
+
+            const positionBadge = document.createElement('div');
+            positionBadge.classList.add('position-badge');
+            positionBadge.textContent = index + 1; // The number is set correctly
+
+            // 2. APPEND THE STRUCTURE TO THE DOM
+            // This ensures the visual order matches the array order.
+            previewWrapper.appendChild(dragHandle);
+            previewWrapper.appendChild(img);
+            previewWrapper.appendChild(removeBtn);
+            previewWrapper.appendChild(positionBadge);
+            previewContainer.appendChild(previewWrapper);
+
+            // Add event listeners to the newly created element
+            previewWrapper.addEventListener('dragstart', handleDragStart);
+            previewWrapper.addEventListener('dragover', handleDragOver);
+            previewWrapper.addEventListener('drop', handleDrop);
+            previewWrapper.addEventListener('dragenter', handleDragEnter);
+            previewWrapper.addEventListener('dragleave', handleDragLeave);
+            previewWrapper.addEventListener('dragend', handleDragEnd);
+            previewWrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
+            previewWrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
+            previewWrapper.addEventListener('touchend', handleTouchEnd);
+
+            // 3. LOAD THE IMAGE DATA ASYNCHRONOUSLY
+            // This part happens in the background. When the file is loaded,
+            // it will populate the `src` of the `img` tag that's already in the correct visual position.
             const reader = new FileReader();
             reader.onload = (e) => {
-                const previewWrapper = document.createElement('div');
-                previewWrapper.classList.add('preview-wrapper');
-                previewWrapper.draggable = true;
-                previewWrapper.dataset.index = index;
-
-                // Add drag handle indicator
-                const dragHandle = document.createElement('div');
-                dragHandle.classList.add('drag-handle');
-                dragHandle.innerHTML = '⋮⋮'; // Unicode for drag handle dots
-
-                const img = document.createElement('img');
                 img.src = e.target.result;
-                img.classList.add('preview-thumbnail');
-
-                const removeBtn = document.createElement('button');
-                removeBtn.classList.add('remove-preview-btn');
-                removeBtn.textContent = 'X';
-                removeBtn.type = 'button';
-                removeBtn.onclick = () => {
-                    filesToUpload.splice(index, 1);
-                    renderPreviews();
-                    analyzeBtn.disabled = filesToUpload.length === 0;
-                };
-
-                // Add position indicator
-                const positionBadge = document.createElement('div');
-                positionBadge.classList.add('position-badge');
-                positionBadge.textContent = index + 1;
-
-                previewWrapper.appendChild(dragHandle);
-                previewWrapper.appendChild(img);
-                previewWrapper.appendChild(removeBtn);
-                previewWrapper.appendChild(positionBadge);
-                previewContainer.appendChild(previewWrapper);
-
-                // Add drag event listeners for desktop
-                previewWrapper.addEventListener('dragstart', handleDragStart);
-                previewWrapper.addEventListener('dragover', handleDragOver);
-                previewWrapper.addEventListener('drop', handleDrop);
-                previewWrapper.addEventListener('dragenter', handleDragEnter);
-                previewWrapper.addEventListener('dragleave', handleDragLeave);
-                previewWrapper.addEventListener('dragend', handleDragEnd);
-                
-                // Add touch event listeners for mobile
-                previewWrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
-                previewWrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
-                previewWrapper.addEventListener('touchend', handleTouchEnd);
             };
             reader.readAsDataURL(file);
         });
