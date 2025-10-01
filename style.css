@@ -56,7 +56,6 @@ header h3 {
     align-items: center;
 }
 
-/* UPDATED rule to normalize button and link appearance */
 #nav-links a,
 #nav-links button {
     padding: 0.5rem 1.25rem;
@@ -69,8 +68,8 @@ header h3 {
     transition: all 0.3s ease;
     cursor: pointer;
     font-size: 0.95rem;
-    font-family: inherit; /* NEW: Ensures button uses the same font */
-    line-height: 1;       /* NEW: Ensures consistent vertical alignment */
+    font-family: inherit;
+    line-height: 1;
 }
 
 #nav-links a:hover,
@@ -143,7 +142,6 @@ main {
     background: #f0f0f0;
     margin: 0.75rem auto 0 auto;
 }
-
 
 /* --- Buttons --- */
 button, .button {
@@ -308,7 +306,7 @@ form textarea {
     box-shadow: none;
 }
 
-
+/* --- Item Details --- */
 .item-details h2 {
     margin-top: 0;
 }
@@ -334,6 +332,15 @@ form textarea {
     margin-bottom: 1.5rem;
 }
 
+/* --- Image Gallery --- */
+.image-gallery {
+    margin-bottom: 1.5rem;
+}
+
+.main-image-container {
+    margin-bottom: 1rem;
+}
+
 #main-gallery-image {
     display: block;
     width: 100%;
@@ -342,15 +349,6 @@ form textarea {
     object-fit: contain;
     margin: 0 auto;
     border-radius: 12px;
-}
-
-/* NEW: Styles for the gallery containers and thumbnails */
-.image-gallery {
-    margin-bottom: 1.5rem;
-}
-
-.main-image-container {
-    margin-bottom: 1rem;
 }
 
 .thumbnail-container {
@@ -381,50 +379,120 @@ form textarea {
     opacity: 1;
 }
 
-/* --- Image Preview Styles --- */
-
+/* --- Image Upload Preview with Drag & Drop --- */
 #image-preview-container {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 1rem;
-    margin-bottom: 1rem;
+    gap: 15px;
+    margin: 20px 0;
+    padding: 15px;
+    min-height: 140px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    background: #fafafa;
 }
 
 .preview-wrapper {
     position: relative;
-}
-
-.preview-thumbnail {
-    width: 100px;
-    height: 100px;
-    object-fit: cover;
+    width: 120px;
+    height: 120px;
+    border: 2px solid #e0e0e0;
     border-radius: 8px;
-    border: 1px solid #ddd;
+    overflow: hidden;
+    cursor: move;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: white;
 }
 
-.remove-preview-btn {
+.preview-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Preview thumbnail image */
+.preview-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Drag handle - top left */
+.drag-handle {
     position: absolute;
-    top: -5px;
-    right: -5px;
-    width: 20px;
-    height: 20px;
-    background-color: #dc3545; /* Red */
+    top: 4px;
+    left: 4px;
+    color: #666;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 2px 5px;
+    border-radius: 4px;
+    z-index: 2;
+    pointer-events: none;
+    line-height: 1;
+}
+
+/* Position badge - top right */
+.position-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: #4CAF50;
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Remove button - bottom right corner */
+.preview-wrapper .remove-preview-btn {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    width: 26px;
+    height: 26px;
+    background: rgba(244, 67, 54, 0.95);
     color: white;
     border: none;
     border-radius: 50%;
-    font-size: 12px;
-    font-weight: bold;
     cursor: pointer;
+    font-weight: bold;
+    font-size: 14px;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    line-height: 1;
 }
 
-.remove-preview-btn:hover {
-    background-color: #c82333; /* Darker Red */
+.preview-wrapper:hover .remove-preview-btn {
+    opacity: 1;
+}
+
+.preview-wrapper .remove-preview-btn:hover {
+    background: #f44336;
+    transform: scale(1.1);
+}
+
+/* Dragging states */
+.preview-wrapper.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+    cursor: grabbing;
+}
+
+.preview-wrapper.drag-over {
+    border-color: #4CAF50;
+    border-width: 3px;
+    background: #e8f5e9;
 }
 
 /* --- Status & Helper Classes --- */
@@ -451,6 +519,7 @@ form textarea {
     animation: pulse 1.5s infinite;
 }
 
+/* --- Upload Progress --- */
 #upload-progress-container {
     margin-top: 1.5rem;
     text-align: center;
@@ -469,14 +538,15 @@ form textarea {
     border: 1px solid #ccc;
 }
 
-/* Styling for the progress bar color */
 #upload-progress-bar::-webkit-progress-bar {
     background-color: #f0f0f0;
 }
+
 #upload-progress-bar::-webkit-progress-value {
     background-color: #0050e6;
     transition: width 0.1s linear;
 }
+
 #upload-progress-bar::-moz-progress-bar {
     background-color: #0050e6;
 }
@@ -559,6 +629,27 @@ body.dark-mode #theme-toggle-btn {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Dark mode - Image preview */
+body.dark-mode #image-preview-container {
+    background: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark-mode .preview-wrapper {
+    background: #333;
+    border-color: #444;
+}
+
+body.dark-mode .preview-wrapper.drag-over {
+    border-color: #4CAF50;
+    background: #1b5e20;
+}
+
+body.dark-mode .drag-handle {
+    background: rgba(50, 50, 50, 0.95);
+    color: #aaa;
+}
+
 /* --- Media Queries for Responsiveness --- */
 @media (max-width: 768px) {
     body {
@@ -626,7 +717,8 @@ body.dark-mode #theme-toggle-btn {
         margin: 0.5rem auto;
     }
     
-    #app-content, #listings-section {
+    #app-content, 
+    #listings-section {
         padding: 1rem;
     }
 
@@ -649,6 +741,34 @@ body.dark-mode #theme-toggle-btn {
     .listing-card h3 {
         font-size: 1rem;
     }
+    
+    /* Mobile - Image preview adjustments */
+    .preview-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .preview-wrapper .remove-preview-btn {
+        opacity: 1; /* Always visible on mobile */
+        width: 24px;
+        height: 24px;
+        font-size: 12px;
+    }
+    
+    .position-badge {
+        width: 20px;
+        height: 20px;
+        font-size: 10px;
+    }
+    
+    .drag-handle {
+        font-size: 10px;
+        padding: 1px 3px;
+    }
+    
+    #image-preview-container {
+        justify-content: center;
+    }
 }
 
 @media (max-width: 400px) {
@@ -670,156 +790,5 @@ body.dark-mode #theme-toggle-btn {
         width: 2.2rem;
         height: 2.2rem;
         font-size: 1rem;
-    }
-}
-
-
-/* drag drop styles */
-
-/* Image preview container styles */
-#image-preview-container {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin: 20px 0;
-    padding: 10px;
-    min-height: 120px;
-    border: 2px dashed #ddd;
-    border-radius: 8px;
-    background: #fafafa;
-}
-
-/* Individual preview wrapper */
-.preview-wrapper {
-    position: relative;
-    width: 120px;
-    height: 120px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: move;
-    transition: transform 0.2s, box-shadow 0.2s;
-    background: white;
-}
-
-.preview-wrapper:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-}
-
-/* Drag handle indicator */
-.drag-handle {
-    position: absolute;
-    top: 5px;
-    left: 5px;
-    color: #666;
-    font-size: 14px;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 2px 4px;
-    border-radius: 4px;
-    z-index: 2;
-    pointer-events: none;
-}
-
-/* Position badge */
-.position-badge {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background: #4CAF50;
-    color: white;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: bold;
-    z-index: 2;
-    pointer-events: none;
-}
-
-/* Remove button styling */
-.preview-wrapper .remove-preview-btn {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    width: 28px;
-    height: 28px;
-    background: rgba(244, 67, 54, 0.9);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    font-weight: bold;
-    z-index: 2;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.preview-wrapper:hover .remove-preview-btn {
-    opacity: 1;
-}
-
-.preview-wrapper .remove-preview-btn:hover {
-    background: #f44336;
-    transform: scale(1.1);
-}
-
-/* Preview thumbnail */
-.preview-thumbnail {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-/* Dragging states */
-.preview-wrapper.dragging {
-    opacity: 0.4;
-    transform: scale(0.95);
-    cursor: grabbing;
-}
-
-.preview-wrapper.drag-over {
-    border-color: #4CAF50;
-    border-width: 3px;
-    background: #e8f5e9;
-}
-
-/* Dark mode support */
-body.dark-mode #image-preview-container {
-    background: #2a2a2a;
-    border-color: #444;
-}
-
-body.dark-mode .preview-wrapper {
-    background: #333;
-    border-color: #444;
-}
-
-body.dark-mode .preview-wrapper.drag-over {
-    border-color: #4CAF50;
-    background: #1b5e20;
-}
-
-body.dark-mode .drag-handle {
-    background: rgba(50, 50, 50, 0.9);
-    color: #aaa;
-}
-
-/* Mobile touch support */
-@media (max-width: 768px) {
-    .preview-wrapper {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .preview-wrapper .remove-preview-btn {
-        opacity: 1; /* Always visible on mobile */
-    }
-    
-    #image-preview-container {
-        justify-content: center;
     }
 }
