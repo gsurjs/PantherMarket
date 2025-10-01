@@ -976,7 +976,14 @@ function addListingFormListener(auth, db, storage) {
                 // Use the new document's ID to create a unique storage path for each image.
                 const filePath = `listings/${user.uid}/${docRef.id}/${Date.now()}_${file.name}`;
                 const fileRef = storage.ref(filePath);
-                const uploadTask = fileRef.put(file);
+
+                const metadata = {
+                    customMetadata: {
+                        'sortOrder': index.toString()
+                    }
+                };
+
+                const uploadTask = fileRef.put(file, metadata);
 
                 // Return a new promise that resolves when the upload is complete
                 return new Promise((resolve, reject) => {
