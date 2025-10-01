@@ -619,37 +619,233 @@ function addListingFormListener(auth, db, storage) {
 
     // Array to store all selected files for upload.
     let filesToUpload = [];
+
+    // Variables for drag and drop
+    let draggedIndex = null;
+    let touchItem = null;
+    let touchOffset = { x: 0, y: 0 };
     
-    // Helper function to render the previews (This remains the same)
+    // Enhanced renderPreviews function with drag and drop support
     const renderPreviews = () => {
-        previewContainer.innerHTML = '';
+        previewContainer.innerHTML = ''; // Clear the container first
+
+        // This loop creates the structure for each preview immediately and in order.
         filesToUpload.forEach((file, index) => {
+            // 1. CREATE THE PREVIEW STRUCTURE SYNCHRONOUSLY
+            const previewWrapper = document.createElement('div');
+            previewWrapper.classList.add('preview-wrapper');
+            previewWrapper.draggable = true;
+            previewWrapper.dataset.index = index;
+
+            const dragHandle = document.createElement('div');
+            dragHandle.classList.add('drag-handle');
+            dragHandle.innerHTML = '⋮⋮';
+
+            const img = document.createElement('img');
+            img.classList.add('preview-thumbnail');
+            // We create the img tag, but we don't set its src yet.
+
+            const removeBtn = document.createElement('button');
+            removeBtn.classList.add('remove-preview-btn');
+            removeBtn.textContent = 'X';
+            removeBtn.type = 'button';
+            removeBtn.onclick = () => {
+                filesToUpload.splice(index, 1);
+                renderPreviews(); // Re-render after removal
+                analyzeBtn.disabled = filesToUpload.length === 0;
+            };
+
+            const positionBadge = document.createElement('div');
+            positionBadge.classList.add('position-badge');
+            positionBadge.textContent = index + 1; // The number is set correctly
+
+            // 2. APPEND THE STRUCTURE TO THE DOM
+            // This ensures the visual order matches the array order.
+            previewWrapper.appendChild(dragHandle);
+            previewWrapper.appendChild(img);
+            previewWrapper.appendChild(removeBtn);
+            previewWrapper.appendChild(positionBadge);
+            previewContainer.appendChild(previewWrapper);
+
+            // Add event listeners to the newly created element
+            previewWrapper.addEventListener('dragstart', handleDragStart);
+            previewWrapper.addEventListener('dragover', handleDragOver);
+            previewWrapper.addEventListener('drop', handleDrop);
+            previewWrapper.addEventListener('dragenter', handleDragEnter);
+            previewWrapper.addEventListener('dragleave', handleDragLeave);
+            previewWrapper.addEventListener('dragend', handleDragEnd);
+            previewWrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
+            previewWrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
+            previewWrapper.addEventListener('touchend', handleTouchEnd);
+
+            // 3. LOAD THE IMAGE DATA ASYNCHRONOUSLY
+            // This part happens in the background. When the file is loaded,
+            // it will populate the `src` of the `img` tag that's already in the correct visual position.
             const reader = new FileReader();
             reader.onload = (e) => {
-                const previewWrapper = document.createElement('div');
-                previewWrapper.classList.add('preview-wrapper');
-
-                const img = document.createElement('img');
                 img.src = e.target.result;
-                img.classList.add('preview-thumbnail');
-
-                const removeBtn = document.createElement('button');
-                removeBtn.classList.add('remove-preview-btn');
-                removeBtn.textContent = 'X';
-                removeBtn.type = 'button';
-                removeBtn.onclick = () => {
-                    filesToUpload.splice(index, 1);
-                    renderPreviews();
-                    analyzeBtn.disabled = filesToUpload.length === 0;
-                };
-
-                previewWrapper.appendChild(img);
-                previewWrapper.appendChild(removeBtn);
-                previewContainer.appendChild(previewWrapper);
             };
             reader.readAsDataURL(file);
         });
     };
+
+    // Desktop drag and drop handler functions
+    function handleDragStart(e) {
+        draggedIndex = parseInt(e.currentTarget.dataset.index);
+        e.currentTarget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // Store some data to make the drag work in Firefox
+        e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault(); // Allows us to drop
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDragEnter(e) {
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation(); // Stops some browsers from redirecting
+        }
+
+        const dropIndex = parseInt(e.currentTarget.dataset.index);
+        
+        if (draggedIndex !== null && draggedIndex !== dropIndex) {
+            // Reorder the files array
+            // 1. Remove the dragged file from its original position and store it.
+            const [draggedFile] = filesToUpload.splice(draggedIndex, 1);
+            // 2. Insert the dragged file at the new drop position.
+            filesToUpload.splice(dropIndex, 0, draggedFile);
+            
+            // Re-render the previews with new order
+            renderPreviews();
+        }
+        
+        return false;
+    }
+
+    function handleDragEnd(e) {
+        // Clean up
+        draggedIndex = null;
+        document.querySelectorAll('.preview-wrapper').forEach(wrapper => {
+            wrapper.classList.remove('dragging', 'drag-over');
+        });
+    }
+    
+    // Mobile touch handler functions
+    function handleTouchStart(e) {
+        const touch = e.targetTouches[0];
+        touchItem = e.currentTarget;
+        draggedIndex = parseInt(touchItem.dataset.index);
+        
+        // Calculate offset from touch point to element top-left
+        const rect = touchItem.getBoundingClientRect();
+        touchOffset.x = touch.clientX - rect.left;
+        touchOffset.y = touch.clientY - rect.top;
+        
+        // Add dragging class for visual feedback
+        touchItem.classList.add('dragging');
+        touchItem.style.position = 'fixed';
+        touchItem.style.zIndex = '1000';
+        touchItem.style.width = rect.width + 'px';
+        touchItem.style.height = rect.height + 'px';
+        
+        // Position at touch point
+        touchItem.style.left = (touch.clientX - touchOffset.x) + 'px';
+        touchItem.style.top = (touch.clientY - touchOffset.y) + 'px';
+        
+        e.preventDefault();
+    }
+    
+    function handleTouchMove(e) {
+        if (!touchItem) return;
+        
+        const touch = e.targetTouches[0];
+        
+        // Update position
+        touchItem.style.left = (touch.clientX - touchOffset.x) + 'px';
+        touchItem.style.top = (touch.clientY - touchOffset.y) + 'px';
+        
+        // Find element under touch point
+        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (elementBelow) {
+            const dropTarget = elementBelow.closest('.preview-wrapper');
+            
+            // Clear all drag-over states
+            document.querySelectorAll('.preview-wrapper').forEach(wrapper => {
+                wrapper.classList.remove('drag-over');
+            });
+            
+            // Add drag-over to current target
+            if (dropTarget && dropTarget !== touchItem) {
+                dropTarget.classList.add('drag-over');
+            }
+        }
+        
+        e.preventDefault();
+    }
+    
+    function handleTouchEnd(e) {
+        if (!touchItem) return;
+        
+        // 1. Temporarily hide the element being dragged.
+        touchItem.style.display = 'none';
+
+        const touch = e.changedTouches[0];
+        // 2. NOW, find the element underneath the touch point.
+        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+
+        // 3. Immediately make the dragged element visible again.
+        touchItem.style.display = '';
+
+        if (elementBelow) {
+            const dropTarget = elementBelow.closest('.preview-wrapper');
+
+            if (dropTarget && dropTarget !== touchItem) {
+                const dropIndex = parseInt(dropTarget.dataset.index);
+
+                if (draggedIndex !== null && draggedIndex !== dropIndex) {
+                    // --- REFACTORED LOGIC (More Robust) ---
+                    // 1. Remove the dragged file from its original position.
+                    const [draggedFile] = filesToUpload.splice(draggedIndex, 1);
+                    // 2. Insert the dragged file back into the array at the drop position.
+                    filesToUpload.splice(dropIndex, 0, draggedFile);
+
+                    // Re-render the previews with the new, correct order
+                    renderPreviews();
+                }
+            }
+        }
+        
+        // Clean up
+        touchItem.style.position = '';
+        touchItem.style.zIndex = '';
+        touchItem.style.width = '';
+        touchItem.style.height = '';
+        touchItem.style.left = '';
+        touchItem.style.top = '';
+        touchItem.classList.remove('dragging');
+        
+        document.querySelectorAll('.preview-wrapper').forEach(wrapper => {
+            wrapper.classList.remove('drag-over');
+        });
+        
+        touchItem = null;
+        draggedIndex = null;
+        
+        e.preventDefault();
+    }
 
     // Event listener for file input changes (This remains the same)
     imageInput.addEventListener('change', (event) => {
@@ -780,7 +976,14 @@ function addListingFormListener(auth, db, storage) {
                 // Use the new document's ID to create a unique storage path for each image.
                 const filePath = `listings/${user.uid}/${docRef.id}/${Date.now()}_${file.name}`;
                 const fileRef = storage.ref(filePath);
-                const uploadTask = fileRef.put(file);
+
+                const metadata = {
+                    customMetadata: {
+                        'sortOrder': index.toString()
+                    }
+                };
+
+                const uploadTask = fileRef.put(file, metadata);
 
                 // Return a new promise that resolves when the upload is complete
                 return new Promise((resolve, reject) => {
