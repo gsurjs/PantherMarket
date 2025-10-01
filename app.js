@@ -717,8 +717,9 @@ function addListingFormListener(auth, db, storage) {
         
         if (draggedIndex !== null && draggedIndex !== dropIndex) {
             // Reorder the files array
-            const draggedFile = filesToUpload[draggedIndex];
-            filesToUpload.splice(draggedIndex, 1);
+            // 1. Remove the dragged file from its original position and store it.
+            const [draggedFile] = filesToUpload.splice(draggedIndex, 1);
+            // 2. Insert the dragged file at the new drop position.
             filesToUpload.splice(dropIndex, 0, draggedFile);
             
             // Re-render the previews with new order
@@ -792,22 +793,30 @@ function addListingFormListener(auth, db, storage) {
     function handleTouchEnd(e) {
         if (!touchItem) return;
         
+        // 1. Temporarily hide the element being dragged.
+        touchItem.style.display = 'none';
+
         const touch = e.changedTouches[0];
+        // 2. NOW, find the element underneath the touch point.
         const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-        
+
+        // 3. Immediately make the dragged element visible again.
+        touchItem.style.display = '';
+
         if (elementBelow) {
             const dropTarget = elementBelow.closest('.preview-wrapper');
-            
+
             if (dropTarget && dropTarget !== touchItem) {
                 const dropIndex = parseInt(dropTarget.dataset.index);
-                
+
                 if (draggedIndex !== null && draggedIndex !== dropIndex) {
-                    // Reorder the files array
-                    const draggedFile = filesToUpload[draggedIndex];
-                    filesToUpload.splice(draggedIndex, 1);
+                    // --- REFACTORED LOGIC (More Robust) ---
+                    // 1. Remove the dragged file from its original position.
+                    const [draggedFile] = filesToUpload.splice(draggedIndex, 1);
+                    // 2. Insert the dragged file back into the array at the drop position.
                     filesToUpload.splice(dropIndex, 0, draggedFile);
-                    
-                    // Re-render the previews with new order
+
+                    // Re-render the previews with the new, correct order
                     renderPreviews();
                 }
             }
