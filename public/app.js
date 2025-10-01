@@ -977,13 +977,12 @@ function addListingFormListener(auth, db, storage) {
                 const filePath = `listings/${user.uid}/${docRef.id}/${Date.now()}_${file.name}`;
                 const fileRef = storage.ref(filePath);
 
-                const metadata = {
+                const uploadTask = fileRef.put(file, {
+                    contentType: file.type || 'image/jpeg',
                     customMetadata: {
-                        'sortOrder': index.toString()
+                        'sortOrder': String(index)
                     }
-                };
-
-                const uploadTask = fileRef.put(file, metadata);
+                });
 
                 // Return a new promise that resolves when the upload is complete
                 return new Promise((resolve, reject) => {
