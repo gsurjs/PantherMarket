@@ -672,3 +672,154 @@ body.dark-mode #theme-toggle-btn {
         font-size: 1rem;
     }
 }
+
+
+/* drag drop styles */
+
+/* Image preview container styles */
+#image-preview-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin: 20px 0;
+    padding: 10px;
+    min-height: 120px;
+    border: 2px dashed #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+}
+
+/* Individual preview wrapper */
+.preview-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: move;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: white;
+}
+
+.preview-wrapper:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Drag handle indicator */
+.drag-handle {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    color: #666;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 2px 4px;
+    border-radius: 4px;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Position badge */
+.position-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #4CAF50;
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 2;
+    pointer-events: none;
+}
+
+/* Remove button styling */
+.preview-wrapper .remove-preview-btn {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    width: 28px;
+    height: 28px;
+    background: rgba(244, 67, 54, 0.9);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: bold;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.preview-wrapper:hover .remove-preview-btn {
+    opacity: 1;
+}
+
+.preview-wrapper .remove-preview-btn:hover {
+    background: #f44336;
+    transform: scale(1.1);
+}
+
+/* Preview thumbnail */
+.preview-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Dragging states */
+.preview-wrapper.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+    cursor: grabbing;
+}
+
+.preview-wrapper.drag-over {
+    border-color: #4CAF50;
+    border-width: 3px;
+    background: #e8f5e9;
+}
+
+/* Dark mode support */
+body.dark-mode #image-preview-container {
+    background: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark-mode .preview-wrapper {
+    background: #333;
+    border-color: #444;
+}
+
+body.dark-mode .preview-wrapper.drag-over {
+    border-color: #4CAF50;
+    background: #1b5e20;
+}
+
+body.dark-mode .drag-handle {
+    background: rgba(50, 50, 50, 0.9);
+    color: #aaa;
+}
+
+/* Mobile touch support */
+@media (max-width: 768px) {
+    .preview-wrapper {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .preview-wrapper .remove-preview-btn {
+        opacity: 1; /* Always visible on mobile */
+    }
+    
+    #image-preview-container {
+        justify-content: center;
+    }
+}

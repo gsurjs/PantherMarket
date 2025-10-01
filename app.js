@@ -619,8 +619,13 @@ function addListingFormListener(auth, db, storage) {
 
     // Array to store all selected files for upload.
     let filesToUpload = [];
+
+    // Variables for drag and drop
+    let draggedIndex = null;
+    let touchItem = null;
+    let touchOffset = { x: 0, y: 0 };
     
-    // Helper function to render the previews (This remains the same)
+    // Enhanced renderPreviews function with drag and drop support
     const renderPreviews = () => {
         previewContainer.innerHTML = '';
         filesToUpload.forEach((file, index) => {
@@ -628,6 +633,13 @@ function addListingFormListener(auth, db, storage) {
             reader.onload = (e) => {
                 const previewWrapper = document.createElement('div');
                 previewWrapper.classList.add('preview-wrapper');
+                previewWrapper.draggable = true;
+                previewWrapper.dataset.index = index;
+
+                // Add drag handle indicator
+                const dragHandle = document.createElement('div');
+                dragHandle.classList.add('drag-handle');
+                dragHandle.innerHTML = '⋮⋮'; // Unicode for drag handle dots
 
                 const img = document.createElement('img');
                 img.src = e.target.result;
@@ -643,13 +655,182 @@ function addListingFormListener(auth, db, storage) {
                     analyzeBtn.disabled = filesToUpload.length === 0;
                 };
 
+                // Add position indicator
+                const positionBadge = document.createElement('div');
+                positionBadge.classList.add('position-badge');
+                positionBadge.textContent = index + 1;
+
+                previewWrapper.appendChild(dragHandle);
                 previewWrapper.appendChild(img);
                 previewWrapper.appendChild(removeBtn);
+                previewWrapper.appendChild(positionBadge);
                 previewContainer.appendChild(previewWrapper);
+
+                // Add drag event listeners for desktop
+                previewWrapper.addEventListener('dragstart', handleDragStart);
+                previewWrapper.addEventListener('dragover', handleDragOver);
+                previewWrapper.addEventListener('drop', handleDrop);
+                previewWrapper.addEventListener('dragenter', handleDragEnter);
+                previewWrapper.addEventListener('dragleave', handleDragLeave);
+                previewWrapper.addEventListener('dragend', handleDragEnd);
+                
+                // Add touch event listeners for mobile
+                previewWrapper.addEventListener('touchstart', handleTouchStart, { passive: false });
+                previewWrapper.addEventListener('touchmove', handleTouchMove, { passive: false });
+                previewWrapper.addEventListener('touchend', handleTouchEnd);
             };
             reader.readAsDataURL(file);
         });
     };
+
+    // Desktop drag and drop handler functions
+    function handleDragStart(e) {
+        draggedIndex = parseInt(e.currentTarget.dataset.index);
+        e.currentTarget.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        // Store some data to make the drag work in Firefox
+        e.dataTransfer.setData('text/html', e.currentTarget.innerHTML);
+    }
+
+    function handleDragOver(e) {
+        if (e.preventDefault) {
+            e.preventDefault(); // Allows us to drop
+        }
+        e.dataTransfer.dropEffect = 'move';
+        return false;
+    }
+
+    function handleDragEnter(e) {
+        e.currentTarget.classList.add('drag-over');
+    }
+
+    function handleDragLeave(e) {
+        e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+        if (e.stopPropagation) {
+            e.stopPropagation(); // Stops some browsers from redirecting
+        }
+
+        const dropIndex = parseInt(e.currentTarget.dataset.index);
+        
+        if (draggedIndex !== null && draggedIndex !== dropIndex) {
+            // Reorder the files array
+            const draggedFile = filesToUpload[draggedIndex];
+            filesToUpload.splice(draggedIndex, 1);
+            filesToUpload.splice(dropIndex, 0, draggedFile);
+            
+            // Re-render the previews with new order
+            renderPreviews();
+        }
+        
+        return false;
+    }
+
+    function handleDragEnd(e) {
+        // Clean up
+        draggedIndex = null;
+        document.querySelectorAll('.preview-wrapper').forEach(wrapper => {
+            wrapper.classList.remove('dragging', 'drag-over');
+        });
+    }
+    
+    // Mobile touch handler functions
+    function handleTouchStart(e) {
+        const touch = e.targetTouches[0];
+        touchItem = e.currentTarget;
+        draggedIndex = parseInt(touchItem.dataset.index);
+        
+        // Calculate offset from touch point to element top-left
+        const rect = touchItem.getBoundingClientRect();
+        touchOffset.x = touch.clientX - rect.left;
+        touchOffset.y = touch.clientY - rect.top;
+        
+        // Add dragging class for visual feedback
+        touchItem.classList.add('dragging');
+        touchItem.style.position = 'fixed';
+        touchItem.style.zIndex = '1000';
+        touchItem.style.width = rect.width + 'px';
+        touchItem.style.height = rect.height + 'px';
+        
+        // Position at touch point
+        touchItem.style.left = (touch.clientX - touchOffset.x) + 'px';
+        touchItem.style.top = (touch.clientY - touchOffset.y) + 'px';
+        
+        e.preventDefault();
+    }
+    
+    function handleTouchMove(e) {
+        if (!touchItem) return;
+        
+        const touch = e.targetTouches[0];
+        
+        // Update position
+        touchItem.style.left = (touch.clientX - touchOffset.x) + 'px';
+        touchItem.style.top = (touch.clientY - touchOffset.y) + 'px';
+        
+        // Find element under touch point
+        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        if (elementBelow) {
+            const dropTarget = elementBelow.closest('.preview-wrapper');
+            
+            // Clear all drag-over states
+            document.querySelectorAll('.preview-wrapper').forEach(wrapper => {
+                wrapper.classList.remove('drag-over');
+            });
+            
+            // Add drag-over to current target
+            if (dropTarget && dropTarget !== touchItem) {
+                dropTarget.classList.add('drag-over');
+            }
+        }
+        
+        e.preventDefault();
+    }
+    
+    function handleTouchEnd(e) {
+        if (!touchItem) return;
+        
+        const touch = e.changedTouches[0];
+        const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        if (elementBelow) {
+            const dropTarget = elementBelow.closest('.preview-wrapper');
+            
+            if (dropTarget && dropTarget !== touchItem) {
+                const dropIndex = parseInt(dropTarget.dataset.index);
+                
+                if (draggedIndex !== null && draggedIndex !== dropIndex) {
+                    // Reorder the files array
+                    const draggedFile = filesToUpload[draggedIndex];
+                    filesToUpload.splice(draggedIndex, 1);
+                    filesToUpload.splice(dropIndex, 0, draggedFile);
+                    
+                    // Re-render the previews with new order
+                    renderPreviews();
+                }
+            }
+        }
+        
+        // Clean up
+        touchItem.style.position = '';
+        touchItem.style.zIndex = '';
+        touchItem.style.width = '';
+        touchItem.style.height = '';
+        touchItem.style.left = '';
+        touchItem.style.top = '';
+        touchItem.classList.remove('dragging');
+        
+        document.querySelectorAll('.preview-wrapper').forEach(wrapper => {
+            wrapper.classList.remove('drag-over');
+        });
+        
+        touchItem = null;
+        draggedIndex = null;
+        
+        e.preventDefault();
+    }
 
     // Event listener for file input changes (This remains the same)
     imageInput.addEventListener('change', (event) => {
