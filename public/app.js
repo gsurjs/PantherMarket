@@ -83,8 +83,6 @@ const listingCardHTML = (listing, id) => {
     if (listing.status !== 'active') return '';
 
     let imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
-    // --- UPDATED LINE ---
-    // Now checks that the 'thumb' property itself exists before using it
     if (listing.processedImages && listing.processedImages.length > 0 && listing.processedImages[0].thumb) {
         imageUrl = listing.processedImages[0].thumb;
     }
@@ -175,7 +173,7 @@ function renderWelcomeView(user, auth, db, storage) {
     appContent.innerHTML = welcomeHTML(user);
     document.getElementById('create-listing-btn').addEventListener('click', () => {
         appContent.innerHTML = createListingHTML;
-        addListingFormListener(auth, db, storage);
+        addListingFormListener(user, auth, db, storage);
     });
 }
 
@@ -599,10 +597,9 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
 
 
 // --- FUNCTION TO ADD LISTING FORM LISTENER ---
-function addListingFormListener(auth, db, storage) {
+function addListingFormListener(user, auth, db, storage) {
     const listingForm = document.getElementById('create-listing-form');
     if (!listingForm) return;
-    const user = auth.currentUser;
 
     const formError = document.getElementById('form-error');
     const submitBtn = document.getElementById('submit-listing-btn');
