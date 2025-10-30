@@ -208,29 +208,31 @@ async function initializeApp() {
 function setupAuthListener(auth, db, storage) {
     auth.onAuthStateChanged(async (user) => {
         if (user) {
-            // Get the verification state before reloading
-            const wasEmailVerified = user.emailVerified;
+            const currentUser = auth.currentUser;
+            if (!currentUser) return;
 
-            // Reload the Auth user state
-            await user.reload();
+            // get verification state before reloading
+            const wasEmailVerified = currentUser.emailVerified;
+
+            // reload auth user state
+            await currentUser.reload();
 
             // Get verification state after reloading
-            const isNowEmailVerified = user.emailVerified
+            const isNowEmailVerified = currentUser.emailVerified
 
             // bug fix, force refresh token before doing anything else
-
             if (isNowEmailVerified && !wasEmailVerified) {
-                await user.getIdToken(true); 
+                await currentUser.getIdToken(true); 
             }
             
             // Fetch our custom user profile from Firestore
-            const userDocRef = db.collection('users').doc(user.uid);
+            const userDocRef = db.collection('users').doc(currentUser.uid);
             const userDoc = await userDocRef.get({ source: 'server' });
             const userProfile = userDoc.exists ? userDoc.data() : null;
 
 
             // A user is only truly verified if BOTH flags are true.
-            const isFullyVerified = isNowEmailVerified && userProfile?.isManuallyVerified;
+            const isFullyVerified = currentUser.emailVerified && userProfile?.isManuallyVerified;
 
             if (isFullyVerified) {
                 // --- State 1: User is LOGGED IN and FULLY VERIFIED ---
@@ -284,7 +286,7 @@ function setupAuthListener(auth, db, storage) {
                     }
                 } else {
                     // Default to the home view
-                    renderWelcomeView(user, auth, db, storage);
+                    renderWelcomeView(currentUser, auth, db, storage);
                 }
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
@@ -292,7 +294,7 @@ function setupAuthListener(auth, db, storage) {
                 document.getElementById('listings-section').style.display = 'none';
 
                 navLinks.innerHTML = `<button id="logout-button">Logout</button>`;
-                appContent.innerHTML = verifyEmailHTML(user.email);
+                appContent.innerHTML = verifyEmailHTML(currentUser.email);
                 addResendListener(auth);
 
                 document.getElementById('logout-button').addEventListener('click', () => auth.signOut());
