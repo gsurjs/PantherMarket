@@ -225,8 +225,9 @@ function setupAuthListener(auth, db, storage) {
             // if user's email became verified in this session,
             // we must force a refresh on their auth token to prevent
             // bug that forces newly verified to log out and log back in
+
             if (isNowEmailVerified && !wasEmailVerified) {
-                await. user.getIdToken(true);
+                await user.getIdToken(true);
             }
 
             // A user is only truly verified if BOTH flags are true.
