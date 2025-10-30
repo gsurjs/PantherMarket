@@ -99,6 +99,10 @@ module.exports = async (request, response) => {
       verifiedAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
+    await admin.auth().setCustomUserClaims(userUid, {
+      manuallyVerified: true
+    });
+
     return response.status(200).send({ 
       message: "Email verified successfully!",
       email: userEmail 

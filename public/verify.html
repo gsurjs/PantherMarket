@@ -27,6 +27,7 @@
     </main>
 
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
 
 <script>
         const confirmButton = document.getElementById('confirm-verification-btn');
@@ -47,6 +48,38 @@
             recaptchaToken = token;
             confirmButton.disabled = false;
         }
+
+        // This function will force-refresh the token until the custom claim appears.
+        async function waitForClaims(auth) {
+            // Wait for the auth state to be loaded
+            const user = await new Promise((resolve, reject) => {
+                const unsubscribe = auth.onAuthStateChanged(user => {
+                    unsubscribe();
+                    if (user) {
+                        resolve(user);
+                    } else {
+                        // This case should ideally not be hit if they just registered,
+                        // but it's good to have.
+                        reject(new Error("You must be logged in to verify."));
+                    }
+                }, reject);
+            });
+
+            // Try up to 10 times (20 seconds total)
+            for (let i = 0; i < 10; i++) {
+                await new Promise(resolve => setTimeout(resolve, 2000)); // 2-second delay
+                
+                const tokenResult = await user.getIdTokenResult(true); // Force refresh
+                
+                if (tokenResult.claims.manuallyVerified === true) {
+                    return true; // Claims are ready!
+                }
+                // If not, the loop continues and tries again
+            }
+            
+            // If we exit the loop, it timed out
+            throw new Error("Verification is taking longer than usual. Please refresh and try again.");
+        }
         
         // This function calls our secure API endpoint
         async function verifyWithApi(oobCode) {
@@ -62,6 +95,10 @@
                 });
                 const result = await response.json();
                 if (!response.ok) throw new Error(result.error || 'Verification failed.');
+
+                confirmButton.textContent = 'Finalizing...';
+                await waitForClaims(window.auth);
+
                 verificationContent.innerHTML = `
                     <h2>Email Verified!</h2>
                     <p>Thank you! Your email has been successfully verified.</p>
@@ -71,7 +108,9 @@
                 errorMessage.textContent = error.message;
                 confirmButton.disabled = false;
                 confirmButton.textContent = 'Confirm My Email';
-                grecaptcha.reset();
+                if (typeof grecaptcha !== 'undefined') {
+                    grecaptcha.reset(); // Reset reCAPTCHA on failure
+                }
             }
         }
         
@@ -93,6 +132,7 @@
                 window.siteKey = recaptchaSiteKey; // Store the key globally
 
                 firebase.initializeApp(firebaseConfig);
+                window.auth = firebase.auth();
 
                 // If reCAPTCHA script is already loaded, render it.
                 // Otherwise, onRecaptchaLoad() will handle it.
