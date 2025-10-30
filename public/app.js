@@ -220,19 +220,18 @@ function setupAuthListener(auth, db, storage) {
             // Get verification state after reloading
             const isNowEmailVerified = currentUser.emailVerified
 
+            let tokenResult;
+
             // bug fix, force refresh token before doing anything else
             if (isNowEmailVerified && !wasEmailVerified) {
-                await currentUser.getIdToken(true); 
+                tokenResult = await currentUser.getIdTokenResult(true); 
+            } else {
+                tokenResult = await currentUser.getIdTokenResult(false);
             }
-            
-            // Fetch our custom user profile from Firestore
-            const userDocRef = db.collection('users').doc(currentUser.uid);
-            const userDoc = await userDocRef.get({ source: 'server' });
-            const userProfile = userDoc.exists ? userDoc.data() : null;
 
 
-            // A user is only truly verified if BOTH flags are true.
-            const isFullyVerified = currentUser.emailVerified && userProfile?.isManuallyVerified;
+            const isFullyVerified = tokenResult.claims.email_verified === true &&
+                                    tokenResult.claims.manuallyVerified === true;
 
             if (isFullyVerified) {
                 // --- State 1: User is LOGGED IN and FULLY VERIFIED ---
@@ -941,11 +940,14 @@ function addListingFormListener(auth, db, storage) {
             return;
         }
         try {
-            const userDocRef = db.collection('users').doc(user.uid);
-            const userDoc = await userDocRef.get({ source: 'server' });
-            const isFullyVerified = user.emailVerified && userDoc.exists && userDoc.data().isManuallyVerified;
+            // Get the token and check the claims
+            const tokenResult = await user.getIdTokenResult(false); // false = don't force, it was refreshed on load
+            const isFullyVerified = tokenResult.claims.email_verified === true &&
+                                    tokenResult.claims.manuallyVerified === true;
+
             if (!isFullyVerified) {
-                formError.textContent = "Error: You must be a fully verified user to create a listing.";
+                console.warn("Submit check failed. Claims:", tokenResult.claims);
+                formError.textContent = "Error: Your verification is still processing. Please wait a moment and try again.";
                 return;
             }
         } catch (error) {
@@ -1059,10 +1061,10 @@ function addCardEventListeners(auth, db, storage) {
                 return; // Stop the function here
             }
 
-            // Use our robust, dual-flag verification check
-            const userDocRef = db.collection('users').doc(currentUser.uid);
-            const userDoc = await userDocRef.get({ source: 'server' });
-            const isFullyVerified = currentUser.emailVerified && userDoc.exists && userDoc.data().isManuallyVerified;
+            // Use token-based verification check
+            const tokenResult = await currentUser.getIdTokenResult(false);
+            const isFullyVerified = tokenResult.claims.email_verified === true &&
+                                    tokenResult.claims.manuallyVerified === true;
 
             if (currentUser && isFullyVerified) {
                 // NEW: Save the previous view so the "Back" button knows where to go
