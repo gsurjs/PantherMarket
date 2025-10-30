@@ -173,7 +173,7 @@ function renderWelcomeView(user, auth, db, storage) {
     appContent.innerHTML = welcomeHTML(user);
     document.getElementById('create-listing-btn').addEventListener('click', () => {
         appContent.innerHTML = createListingHTML;
-        addListingFormListener(user, auth, db, storage);
+        addListingFormListener(auth, db, storage);
     });
 }
 
@@ -610,9 +610,11 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
 
 
 // --- FUNCTION TO ADD LISTING FORM LISTENER ---
-function addListingFormListener(user, auth, db, storage) {
+function addListingFormListener(auth, db, storage) {
     const listingForm = document.getElementById('create-listing-form');
     if (!listingForm) return;
+
+    const user = auth.currentUser;
 
     const formError = document.getElementById('form-error');
     const submitBtn = document.getElementById('submit-listing-btn');
