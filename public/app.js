@@ -216,19 +216,18 @@ function setupAuthListener(auth, db, storage) {
 
             // Get verification state after reloading
             const isNowEmailVerified = user.emailVerified
+
+            // bug fix, force refresh token before doing anything else
+
+            if (isNowEmailVerified && !wasEmailVerified) {
+                await user.getIdToken(true); 
+            }
             
             // Fetch our custom user profile from Firestore
             const userDocRef = db.collection('users').doc(user.uid);
             const userDoc = await userDocRef.get({ source: 'server' });
             const userProfile = userDoc.exists ? userDoc.data() : null;
 
-            // if user's email became verified in this session,
-            // we must force a refresh on their auth token to prevent
-            // bug that forces newly verified to log out and log back in
-
-            if (isNowEmailVerified && !wasEmailVerified) {
-                await user.getIdToken(true);
-            }
 
             // A user is only truly verified if BOTH flags are true.
             const isFullyVerified = isNowEmailVerified && userProfile?.isManuallyVerified;
