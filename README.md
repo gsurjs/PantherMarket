@@ -1,6 +1,6 @@
-# 🐾 PantherMarket
+<center># 🐾 PantherMarket</center>
 
-[PantherMarket.app](https://www.panthermarket.app/)
+</center>[PantherMarket.app](https://www.panthermarket.app/)</center>
 
 ### A GSU EXCLUSIVE Marketplace
 
