@@ -637,6 +637,38 @@ function addListingFormListener(auth, db, storage) {
     let draggedIndex = null;
     let touchItem = null;
     let touchOffset = { x: 0, y: 0 };
+
+    async function validateImageSafety(file) {
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                try {
+                    const base64Image = reader.result.split(',')[1];
+                    const functions = firebase.functions();
+                    const analyzeImage = functions.httpsCallable('analyzeImageForSuggestions');
+
+                    // We call the function. We don't care about the *suggestions* here,
+                    // we only care if it *succeeds* (safe) or *fails* (unsafe).
+                    await analyzeImage({ image: base64Image });
+
+                    // If it succeeds, the image is safe.
+                    resolve({ safe: true, file: file });
+
+                } catch (error) {
+                    console.error("Image validation error:", error);
+                    let reason = "Analysis failed.";
+                    if (error.code === 'permission-denied') {
+                        reason = error.message; // Use the specific error from the function
+                    }
+                    resolve({ safe: false, file: file, reason: reason });
+                }
+            };
+            reader.onerror = () => {
+                resolve({ safe: false, file: file, reason: "Could not read file." });
+            };
+        });
+    }
     
     // Enhanced renderPreviews function with drag and drop support
     const renderPreviews = () => {
@@ -860,22 +892,66 @@ function addListingFormListener(auth, db, storage) {
         e.preventDefault();
     }
 
-    // Event listener for file input changes (This remains the same)
-    imageInput.addEventListener('change', (event) => {
-        formError.textContent = '';
+    // Event listener for file input changes, runs safety check automatically for each file
+    imageInput.addEventListener('change', async (event) => {
+        formError.textContent = ''; // Clear previous errors
         const newFiles = Array.from(event.target.files);
-        for (const file of newFiles) {
-            if (filesToUpload.length < 4) {
-                filesToUpload.push(file);
+
+        if (newFiles.length === 0) return;
+
+        // --- Provide user feedback during analysis ---
+        aiStatus.textContent = "Analyzing images, please wait...";
+        aiStatus.style.color = '#333';
+        submitBtn.disabled = true; // Disable submit while checking
+        imageInput.disabled = true; // Prevent adding more files during check
+        
+        // Create an array of validation promises
+        const validationPromises = newFiles.map(validateImageSafety);
+
+        // Run all safety checks in parallel for speed
+        const results = await Promise.all(validationPromises);
+
+        let errorMessages = [];
+        let allFilesSafe = true;
+
+        for (const result of results) {
+            if (result.safe) {
+                // Image is safe, add it to the queue if there's space
+                if (filesToUpload.length < 4) {
+                    filesToUpload.push(result.file);
+                } else {
+                    errorMessages.push(`You can upload a max of 4 images. '${result.file.name}' was not added.`);
+                    allFilesSafe = false;
+                }
             } else {
-                formError.textContent = "You can only select a maximum of 4 images.";
-                break;
+                // Image is unsafe, add to error list
+                errorMessages.push(`<b>${result.file.name}</b> rejected: ${result.reason}`);
+                allFilesSafe = false;
             }
         }
-        renderPreviews();
-        analyzeBtn.disabled = filesToUpload.length === 0;
-    });
 
+        // --- Update UI after analysis is complete ---
+        if (errorMessages.length > 0) {
+            formError.innerHTML = errorMessages.join('<br>');
+        }
+
+        renderPreviews(); // Render only the safe files that were added
+
+        // Update status message
+        if (allFilesSafe && newFiles.length > 0) {
+            aiStatus.textContent = "✅ Images approved.";
+            aiStatus.style.color = 'green';
+        } else if (!allFilesSafe) {
+            aiStatus.textContent = "❌ Some images were rejected.";
+            aiStatus.style.color = 'red';
+        } else {
+            aiStatus.textContent = ""; // Clear status if no files were added
+        }
+
+        analyzeBtn.disabled = filesToUpload.length === 0;
+        submitBtn.disabled = false; // Re-enable submit
+        imageInput.disabled = false; // Re-enable file input
+    });
     // --- Event listener for the "Get AI Suggestions" button ---
     analyzeBtn.addEventListener('click', async () => {
         if (filesToUpload.length === 0) {
