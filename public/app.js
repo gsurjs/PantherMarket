@@ -197,8 +197,7 @@ const userDashboardHTML = `
     </div>
 
     <div class="dashboard-content">
-        <div id="my-listings-grid" class="listings-grid"></div>
-    </div>
+        </div>
 `;
 const myListingCardHTML = (listing, id) => {
     let imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
@@ -579,10 +578,10 @@ async function renderUserDashboard(auth, db, storage) {
     appContent.innerHTML = userDashboardHTML;
     listingsSection.style.display = 'none'; // Hide main listings
     
-    const myGrid = document.getElementById('my-listings-grid');
+    // Find the empty container
     const dashboardContent = document.querySelector('.dashboard-content');
 
-    // --- 1. Load User Profile Data ---
+    // --- 1. Load User Profile Data (Same as before) ---
     const userRef = db.collection('users').doc(user.uid);
     const userDoc = await userRef.get();
     if (userDoc.exists) {
@@ -606,71 +605,8 @@ async function renderUserDashboard(auth, db, storage) {
         document.getElementById('user-email').textContent = user.email;
     }
 
-    // --- Load "My Listings" by default ---
-    const loadMyListings = () => {
-        db.collection('listings')
-            .where('sellerId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
-            .onSnapshot((querySnapshot) => {
-                myGrid.innerHTML = ''; // Clear the grid
-                if (querySnapshot.empty) {
-                    myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
-                    return;
-                }
-                querySnapshot.forEach(doc => {
-                    // Use the NEW myListingCardHTML
-                    myGrid.innerHTML += myListingCardHTML(doc.data(), doc.id);
-                });
-            }, (error) => {
-                console.error("Error fetching user's listings:", error);
-                myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
-            });
-    };
-    loadMyListings(); // Load it on first view
-
-    // --- Add Listeners for Dashboard UI ---
+    // --- 2. Add Listeners for Dashboard UI ---
     
-    // Efficiently handle all button clicks on the grid
-    myGrid.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
-
-        const listingId = target.dataset.id;
-
-        if (target.classList.contains('mark-as-sold-btn')) {
-            const buyerEmail = prompt("Please enter the buyer's GSU email address:");
-            if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
-                const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
-                target.textContent = "Processing...";
-                target.disabled = true;
-                
-                markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
-                    .then(result => {
-                        alert("Listing successfully marked as sold!");
-                    })
-                    .catch(error => {
-                        console.error("Error marking as sold:", error);
-                        alert(`Error: ${error.message}`);
-                        target.textContent = "Mark as Sold";
-                        target.disabled = false;
-                    });
-            } else if (buyerEmail) {
-                alert("Invalid GSU email address.");
-            }
-        }
-
-        if (target.classList.contains('edit-listing-btn')) {
-            db.collection('listings').doc(listingId).get().then(doc => {
-                if (doc.exists) {
-                    sessionStorage.setItem('currentView', 'editListing');
-                    sessionStorage.setItem('currentItemId', listingId);
-                    appContent.innerHTML = editListingHTML(doc.data());
-                    addEditFormListener(auth, db, storage, listingId);
-                }
-            });
-        }
-    });
-
     // Handle clicks on the content area (for "Leave Review")
     dashboardContent.addEventListener('click', (e) => {
         const target = e.target.closest('button');
@@ -688,19 +624,17 @@ async function renderUserDashboard(auth, db, storage) {
             tab.classList.add('active');
 
             if (tab.id === 'tab-my-listings') {
-                myGrid.style.display = 'grid'; // Show grid
-                dashboardContent.innerHTML = ''; // Clear other content
-                dashboardContent.appendChild(myGrid); // Move grid into content
-                loadMyListings(); // Reload listings
+                renderMyListingsTab(auth, db, storage, dashboardContent); // <-- UPDATED
             } else if (tab.id === 'tab-my-orders') {
-                myGrid.style.display = 'none'; // Hide grid
                 renderMyOrders(auth, db, storage, dashboardContent);
             } else if (tab.id === 'tab-my-reviews') {
-                myGrid.style.display = 'none'; // Hide grid
                 renderMyReviews(auth, db, storage, dashboardContent);
             }
         });
     });
+
+    // --- 3. Load "My Listings" Tab by default ---
+    renderMyListingsTab(auth, db, storage, dashboardContent);
 }
 
 // --- Renders the "My Orders" Tab ---
