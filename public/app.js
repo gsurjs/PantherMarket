@@ -2,6 +2,7 @@
 const navLinks = document.getElementById('nav-links');
 const appContent = document.getElementById('app-content');
 const listingsGrid = document.getElementById('listings-grid');
+const listingsSection = document.getElementById('listings-section');
 
 // --- HTML TEMPLATES ---
 const mainListingsSectionHTML = `
