@@ -689,20 +689,36 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
         }
     });
 
-    // --- This loads the listings into the grid ---
     db.collection('listings')
         .where('sellerId', '==', user.uid)
-        .orderBy('createdAt', 'desc')
-        .onSnapshot((querySnapshot) => {
+        .get()
+        .then((querySnapshot) => {
             myGrid.innerHTML = ''; // Clear the grid
             if (querySnapshot.empty) {
                 myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
                 return;
             }
-            querySnapshot.forEach(doc => {
-                myGrid.innerHTML += myListingCardHTML(doc.data(), doc.id);
+
+            // --- Client-side sorting ---
+            // 1. Map docs to an array
+            const listings = querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+
+            // 2. Sort the array by createdAt date, newest first
+            listings.sort((a, b) => {
+                const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+                const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+                return timeB - timeA; // b - a for descending order
             });
-        }, (error) => {
+            // --- End client-side sorting ---
+
+            // 3. Render the sorted listings
+            listings.forEach(listing => {
+                // Use listing.data and listing.id from our sorted array
+                myGrid.innerHTML += myListingCardHTML(listing.data, listing.id);
+            });
+
+        })
+        .catch((error) => { // <-- Use .catch() with .get()
             console.error("Error fetching user's listings:", error);
             myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
         });
