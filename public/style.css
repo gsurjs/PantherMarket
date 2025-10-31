@@ -656,7 +656,7 @@ body.dark-mode .listing-card {
 
 body.dark-mode .listing-card img,
 body.dark-mode .thumbnail-image {
-    background: #333; /* Dark background for letterboxing in dark mode */
+    background: #2a2a2a; /* Dark background for letterboxing in dark mode */
 }
 
 body.dark-mode .listing-card:hover {
