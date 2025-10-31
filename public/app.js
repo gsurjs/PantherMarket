@@ -709,7 +709,25 @@ function addListingFormListener(auth, db, storage) {
             removeBtn.classList.add('remove-preview-btn');
             removeBtn.textContent = 'X';
             removeBtn.type = 'button';
-            removeBtn.onclick = () => {
+
+            removeBtn.addEventListener('touchstart', (e) => {
+                // stop touch from bubbling up to the parent wrapper.
+                // prevents the parent's 'touchstart' (drag) from ever firing.
+                e.stopPropagation();
+                
+                // prevent the browser from also firing a "click" event (ghost click).
+                e.preventDefault(); 
+                
+                // now, run the original delete logic.
+                filesToUpload.splice(index, 1);
+                renderPreviews(); // Re-render after removal
+                analyzeBtn.disabled = filesToUpload.length === 0;
+            });
+
+
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                
                 filesToUpload.splice(index, 1);
                 renderPreviews(); // Re-render after removal
                 analyzeBtn.disabled = filesToUpload.length === 0;
