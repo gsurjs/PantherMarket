@@ -637,6 +637,76 @@ async function renderUserDashboard(auth, db, storage) {
     renderMyListingsTab(auth, db, storage, dashboardContent);
 }
 
+// --- NEW FUNCTION: Renders the "My Listings" Tab ---
+function renderMyListingsTab(auth, db, storage, containerElement) {
+    const user = auth.currentUser;
+    containerElement.innerHTML = '<h2>My Listings</h2>'; // Set title
+    
+    // Create the grid
+    const myGrid = document.createElement('div');
+    myGrid.id = 'my-listings-grid';
+    myGrid.className = 'listings-grid';
+    containerElement.appendChild(myGrid);
+
+    myGrid.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const listingId = target.dataset.id;
+
+        if (target.classList.contains('mark-as-sold-btn')) {
+            const buyerEmail = prompt("Please enter the buyer's GSU email address:");
+            if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
+                const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
+                target.textContent = "Processing...";
+                target.disabled = true;
+                
+                markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
+                    .then(result => {
+                        alert("Listing successfully marked as sold!");
+                    })
+                    .catch(error => {
+                        console.error("Error marking as sold:", error);
+                        alert(`Error: ${error.message}`);
+                        target.textContent = "Mark as Sold";
+                        target.disabled = false;
+                    });
+            } else if (buyerEmail) {
+                alert("Invalid GSU email address.");
+            }
+        }
+
+        if (target.classList.contains('edit-listing-btn')) {
+            db.collection('listings').doc(listingId).get().then(doc => {
+                if (doc.exists) {
+                    sessionStorage.setItem('currentView', 'editListing');
+                    sessionStorage.setItem('currentItemId', listingId); // This was the other bug fix
+                    appContent.innerHTML = editListingHTML(doc.data());
+                    addEditFormListener(auth, db, storage, listingId);
+                }
+            });
+        }
+    });
+
+    // --- This loads the listings into the grid ---
+    db.collection('listings')
+        .where('sellerId', '==', user.uid)
+        .orderBy('createdAt', 'desc')
+        .onSnapshot((querySnapshot) => {
+            myGrid.innerHTML = ''; // Clear the grid
+            if (querySnapshot.empty) {
+                myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+                return;
+            }
+            querySnapshot.forEach(doc => {
+                myGrid.innerHTML += myListingCardHTML(doc.data(), doc.id);
+            });
+        }, (error) => {
+            console.error("Error fetching user's listings:", error);
+            myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
+        });
+}
+
 // --- Renders the "My Orders" Tab ---
 async function renderMyOrders(auth, db, storage, containerElement) {
     const user = auth.currentUser;
