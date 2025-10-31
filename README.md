@@ -2,7 +2,7 @@
 
 [PantherMarket.app](https://www.panthermarket.app/)
 
-### A GSU EXCLUSIVE Marketplace
+### A Georgia State University EXCLUSIVE Marketplace
 
 PantherMarket is a secure, exclusive buy/sell/trade marketplace built from the ground up for the Georgia State University community. To ensure safety and exclusivity, the platform requires a **two-step user verification process**:
 1.  **GSU Email Registration:** Users must register with a valid `@gsu.edu` or `@student.gsu.edu` email address.
