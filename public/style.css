@@ -495,6 +495,52 @@ form textarea {
     background: #e8f5e9;
 }
 
+/* --- Trade Feature Styles --- */
+
+/* Checkbox on forms */
+.form-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 10px 0;
+}
+
+/* Make the checkbox bigger and easier to click */
+.form-check input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}
+
+/* Align the label nicely */
+.form-check label {
+    margin-bottom: 0; /* Override default form label margin */
+    font-weight: 500;
+    font-size: 1rem;
+    cursor: pointer;
+}
+
+/* Badge on the listing card */
+.trade-badge {
+    display: inline-block;
+    background-color: #28a745;
+    color: white;
+    padding: 3px 8px;
+    font-size: 0.8em;
+    font-weight: 600;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
+/* Text on the item details page */
+.trade-info {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #28a745;
+    margin-bottom: 1rem;
+}
+
 /* --- Status & Helper Classes --- */
 .error {
     color: #dc3545;
@@ -712,6 +758,15 @@ body.dark-mode .drag-handle {
 .dark-mode progress.ai-progress::-moz-progress-bar {
     background: linear-gradient(90deg, #333 30%, #4a90e2 50%, #333 70%);
     background-size: 200% 100%;
+}
+
+.dark-mode .trade-badge {
+    background-color: #20c997;
+    color: #1a1a1a;
+}
+
+.dark-mode .trade-info {
+    color: #20c997;
 }
 
 /* --- Media Queries for Responsiveness --- */

@@ -61,6 +61,13 @@ const createListingHTML = `
         <input type="text" id="listing-title" placeholder="Item Title" required>
         <textarea id="listing-desc" placeholder="Item Description" required></textarea>
         <input type="number" id="listing-price" placeholder="Price ($)" step="0.01" required>
+
+        <div class="form-check">
+            <input type="checkbox" id="listing-trade">
+            <label for="listing-trade">Open to trades?</label>
+        </div>
+
+
         <label for="listing-image">Upload Images (Up to 4):</label>
         <input type="file" id="listing-image" accept="image/*" multiple required>
 
@@ -101,7 +108,7 @@ const listingCardHTML = (listing, id) => {
         <img src="${imageUrl}" alt="${listing.title}">
         <div class="listing-card-info">
             <h3>${listing.title}</h3>
-            <p>$${listing.price}</p>
+            <p>$${listing.price} ${listing.isTrade ? '<span class="trade-badge">🔄 Trade</span>' : ''}</p>
             <button class="view-details-btn">View Details</button>
         </div>
     </div>
@@ -139,6 +146,7 @@ const itemDetailsHTML = (listing, isOwner) => {
         </div>
         
         <p class="price">$${listing.price}</p>
+        ${listing.isTrade ? `<p class="trade-info">🔄 This seller is open to trades.</p>` : ''}
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
         ${isOwner ? `
@@ -157,6 +165,12 @@ const editListingHTML = (listing) => `
         <input type="text" id="listing-title" value="${listing.title}" required>
         <textarea id="listing-desc" required>${listing.description}</textarea>
         <input type="number" id="listing-price" value="${listing.price}" step="0.01" required>
+
+        <div class="form-check">
+            <input type="checkbox" id="listing-trade" ${listing.isTrade ? 'checked' : ''}>
+            <label for="listing-trade">Open to trades?</label>
+        </div>
+
         <p><em>To change images, please delete this listing and create a new one.</em></p>
         <button type="submit">Save Changes</button>
         <button type="button" id="cancel-edit-btn">Cancel</button>
@@ -626,10 +640,12 @@ function addEditFormListener(auth, db, storage, listingId, originalDoc) {
         const updatedTitle = document.getElementById('listing-title').value;
         const updatedDesc = document.getElementById('listing-desc').value;
         const updatedPrice = document.getElementById('listing-price').value;
+        const updatedTrade = document.getElementById('listing-trade').checked;
 
         // Update the document in Firestore
         db.collection('listings').doc(listingId).update({
             title: updatedTitle,
+            isTrade: updatedTrade,
             description: updatedDesc,
             price: Number(updatedPrice),
             title_lowercase: updatedTitle.toLowerCase(),
@@ -1116,6 +1132,8 @@ function addListingFormListener(auth, db, storage) {
         const title = document.getElementById('listing-title').value;
         const description = document.getElementById('listing-desc').value;
         const price = document.getElementById('listing-price').value;
+        const isTrade = document.getElementById('listing-trade').checked; //adding trade option
+
         if (filesToUpload.length === 0) {
             formError.textContent = "Please select at least one image.";
             return;
@@ -1134,6 +1152,7 @@ function addListingFormListener(auth, db, storage) {
             docRef = await db.collection("listings").add({
                 title: title,
                 title_lowercase: title.toLowerCase(),
+                isTrade: isTrade,
                 title_tokens: title.toLowerCase().split(/\s+/).filter(Boolean),
                 description: description,
                 price: Number(price),
