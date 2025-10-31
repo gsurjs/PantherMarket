@@ -181,6 +181,7 @@ const myListingsHTML = `
 function renderWelcomeView(user, auth, db, storage) {
     appContent.innerHTML = welcomeHTML(user);
     document.getElementById('create-listing-btn').addEventListener('click', () => {
+        sessionStorage.setItem('currentView', 'createListing');
         appContent.innerHTML = createListingHTML;
         addListingFormListener(auth, db, storage);
     });
@@ -282,16 +283,44 @@ function setupAuthListener(auth, db, storage) {
 
                 // --- ROUTING LOGIC: RESTORE VIEW ON PAGE LOAD/REFRESH ---
                 const savedView = sessionStorage.getItem('currentView');
+                
                 if (savedView === 'myListings') {
                     renderMyListings(auth, db, storage);
+
                 } else if (savedView === 'itemDetails') {
                     const savedItemId = sessionStorage.getItem('currentItemId');
                     if (savedItemId) {
                         showItemDetails(auth, db, storage, savedItemId);
                     } else {
-                        // Default to home if ID is missing by programmatically clicking the link
-                        document.getElementById('home-link').click();
+                        document.getElementById('home-link').click(); // Go home if ID is missing
                     }
+
+                } else if (savedView === 'createListing') {
+                    // --- Handle create listing state ---
+                    appContent.innerHTML = createListingHTML;
+                    addListingFormListener(auth, db, storage);
+                
+                } else if (savedView === 'editListing') {
+                    // --- Handle edit listing state ---
+                    const savedItemId = sessionStorage.getItem('currentItemId');
+                    if (savedItemId) {
+                        // We must re-fetch the doc to pre-fill the form
+                        db.collection('listings').doc(savedItemId).get().then(doc => {
+                            if (doc.exists) {
+                                appContent.innerHTML = editListingHTML(doc.data());
+                                addEditFormListener(auth, db, storage, savedItemId);
+                            } else {
+                                alert("The item you were editing seems to be deleted.");
+                                document.getElementById('home-link').click();
+                            }
+                        }).catch(err => {
+                            console.error("Error fetching doc for edit:", err);
+                            document.getElementById('home-link').click();
+                        });
+                    } else {
+                        document.getElementById('home-link').click(); // Go home if ID is missing
+                    }
+
                 } else {
                     // Default to the home view
                     renderWelcomeView(currentUser, auth, db, storage);
@@ -519,6 +548,7 @@ function showItemDetails(auth, db, storage, listingId) {
             
             if (isOwner) {
                 document.getElementById('edit-listing-btn').addEventListener('click', () => {
+                    sessionStorage.setItem('currentView', 'editListing');
                     appContent.innerHTML = editListingHTML(listingData);
                     addEditFormListener(auth, db, storage, listingId);
                 });
@@ -727,7 +757,7 @@ function addListingFormListener(auth, db, storage) {
 
             removeBtn.onclick = (e) => {
                 e.stopPropagation();
-                
+
                 filesToUpload.splice(index, 1);
                 renderPreviews(); // Re-render after removal
                 analyzeBtn.disabled = filesToUpload.length === 0;
@@ -1167,7 +1197,7 @@ function addListingFormListener(auth, db, storage) {
     // Cancel button listener (This remains the same)
     cancelBtn.addEventListener('click', () => {
         filesToUpload = [];
-        renderWelcomeView(user, auth, db, storage);
+        document.getElementById('home-link').click();
     });
 }
 
