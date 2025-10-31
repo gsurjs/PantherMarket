@@ -185,11 +185,26 @@ const accessDeniedHTML = `
     <p>Please log in or register to continue.</p>
 `;
 
-const myListingsHTML = `
-    <h2>My Listings</h2>
-    <p>Here are all the items you currently have for sale.</p>
-    <div id="my-listings-grid" class="listings-grid">
+// User Dashboard 
+const userDashboardHTML = `
+    <div class="dashboard-profile-header">
+        <div class="profile-info">
+            <h2 id="user-email">Loading...</h2>
+            <div class="profile-rating" id="user-rating-container" style="display: none;">
+                </div>
+            <span id="user-review-count">(No reviews yet)</span>
         </div>
+    </div>
+
+    <div class="dashboard-nav-tabs">
+        <button id="tab-my-listings" class="dashboard-tab active">My Listings</button>
+        <button id="tab-my-orders" class="dashboard-tab">My Orders</button>
+        <button id="tab-my-reviews" class="dashboard-tab">My Reviews</button>
+    </div>
+
+    <div class="dashboard-content">
+        <div id="my-listings-grid" class="listings-grid"></div>
+    </div>
 `;
 
 function renderWelcomeView(user, auth, db, storage) {
@@ -264,7 +279,7 @@ function setupAuthListener(auth, db, storage) {
 
                 navLinks.innerHTML = `
                     <a href="#" id="home-link">Home</a>
-                    <a href="#" id="my-listings-link">My Listings</a>
+                    <a href="#" id="dashboard-link">Dashboard</a>
                     <button id="logout-button">Logout</button>
                 `;
 
@@ -289,17 +304,17 @@ function setupAuthListener(auth, db, storage) {
                     loadAllListings(auth, db, storage);
                 });
 
-                document.getElementById('my-listings-link').addEventListener('click', (e) => {
+                document.getElementById('dashboard-link').addEventListener('click', (e) => {
                     e.preventDefault();
-                    sessionStorage.setItem('currentView', 'myListings'); // Save the state
-                    renderMyListings(auth, db, storage);
+                    // The function now handles its own state
+                    renderUserDashboard(auth, db, storage);
                 });
 
                 // --- ROUTING LOGIC: RESTORE VIEW ON PAGE LOAD/REFRESH ---
                 const savedView = sessionStorage.getItem('currentView');
                 
-                if (savedView === 'myListings') {
-                    renderMyListings(auth, db, storage);
+                if (savedView === 'dashboard') {
+                    renderUserDashboard(auth, db, storage);
 
                 } else if (savedView === 'itemDetails') {
                     const savedItemId = sessionStorage.getItem('currentItemId');
@@ -479,28 +494,61 @@ function loadAllListings(auth, db, storage, searchTerm = '') {
 }
 
 
-// --- FUNCTION TO RENDER ONLY THE CURRENT USER'S LISTINGS ---
-async function renderMyListings(auth, db, storage) {
+// --- FUNCTION TO RENDER USER DASHBOARD ---
+async function renderUserDashboard(auth, db, storage) {
     const user = auth.currentUser;
-    if (!user) return; // Exit if no user is logged in
+    if (!user) return;
 
+    // Save state
+    sessionStorage.setItem('currentView', 'dashboard');
+    
     // Hide the main app content to show our new view
-    document.getElementById('app-content').style.display = 'none';
+    document.getElementById('app-content').style.display = 'block';
+    appContent.innerHTML = userDashboardHTML;
     
     // Use the main listings section for this view
     const listingsSection = document.getElementById('listings-section');
-    listingsSection.style.display = 'block';
-    listingsSection.innerHTML = myListingsHTML; // Set the page structure
+    listingsSection.style.display = 'none'; // We're using appContent
     
     const myGrid = document.getElementById('my-listings-grid');
 
-    // Use onSnapshot for a real-time listener
+    // --- 1. Load User Profile Data ---
+    const userRef = db.collection('users').doc(user.uid);
+    const userDoc = await userRef.get();
+
+    if (userDoc.exists) {
+        const userData = userDoc.data();
+        document.getElementById('user-email').textContent = userData.email;
+
+        const averageRating = userData.averageRating || 0;
+        const reviewCount = userData.reviewCount || 0;
+        
+        const ratingContainer = document.getElementById('user-rating-container');
+        if (reviewCount > 0) {
+            // Display stars
+            ratingContainer.style.display = 'inline-block';
+            let starsHTML = '';
+            const filledStars = Math.round(averageRating);
+            for (let i = 1; i <= 5; i++) {
+                starsHTML += `<span class="star ${i <= filledStars ? 'filled' : ''}">★</span>`;
+            }
+            ratingContainer.innerHTML = starsHTML;
+            
+            // Display review count
+            const reviewText = reviewCount === 1 ? '1 review' : `${reviewCount} reviews`;
+            document.getElementById('user-review-count').textContent = `(${reviewText})`;
+        }
+    } else {
+        // Fallback if user doc doesn't exist (shouldn't happen)
+        document.getElementById('user-email').textContent = user.email;
+    }
+
+    // --- 2. Load "My Listings" (this is your old renderMyListings logic) ---
     db.collection('listings')
         .where('sellerId', '==', user.uid)
         .orderBy('createdAt', 'desc')
         .onSnapshot((querySnapshot) => {
-            // Clear the grid on each update
-            myGrid.innerHTML = '';
+            myGrid.innerHTML = ''; // Clear the grid on each update
             
             if (querySnapshot.empty) {
                 myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
@@ -511,15 +559,21 @@ async function renderMyListings(auth, db, storage) {
                 myGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
             });
 
-            // Re-attach event listeners to the new cards
             addCardEventListeners(auth, db, storage);
 
         }, (error) => {
             console.error("Error fetching user's listings:", error);
             myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
         });
+    
+    // --- 3. (Optional) Add Tab Listeners (we can build these out next) ---
+    document.getElementById('tab-my-orders').addEventListener('click', () => {
+        alert("Feature coming soon!");
+    });
+    document.getElementById('tab-my-reviews').addEventListener('click', () => {
+        alert("Feature coming soon!");
+    });
 }
-
 
 // reusable function that renders the details page AND attaches all button listeners.
 function showItemDetails(auth, db, storage, listingId) {
@@ -553,8 +607,8 @@ function showItemDetails(auth, db, storage, listingId) {
 
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');
-                if (previousView === 'myListings') {
-                    document.getElementById('my-listings-link').click();
+                if (previousView === 'dashboard') { // <-- CHANGED
+                    document.getElementById('dashboard-link').click(); // <-- CHANGED
                 } else {
                     document.getElementById('home-link').click();
                 }
