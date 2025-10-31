@@ -663,6 +663,7 @@ async function renderUserDashboard(auth, db, storage) {
             db.collection('listings').doc(listingId).get().then(doc => {
                 if (doc.exists) {
                     sessionStorage.setItem('currentView', 'editListing');
+                    sessionStorage.setItem('currentItemId', listingId);
                     appContent.innerHTML = editListingHTML(doc.data());
                     addEditFormListener(auth, db, storage, listingId);
                 }
@@ -828,7 +829,7 @@ async function renderCreateReviewForm(auth, db, storage, orderId) {
 
     // 6. Cancel button
     document.getElementById('cancel-review-btn').addEventListener('click', () => {
-        renderUserDashboard(auth, db, storage);
+        document.getElementById('dashboard-link').click();
     });
 }
 
@@ -871,66 +872,6 @@ function showItemDetails(auth, db, storage, listingId) {
                 }
             });
             
-            if (isOwner) {
-                document.getElementById('edit-listing-btn').addEventListener('click', () => {
-                    sessionStorage.setItem('currentView', 'editListing');
-                    appContent.innerHTML = editListingHTML(listingData);
-                    addEditFormListener(auth, db, storage, listingId);
-                });
-
-                document.getElementById('delete-listing-btn').addEventListener('click', () => {
-                    if (confirm('Are you sure you want to delete this listing?')) {
-                        // Updated delete logic to handle all data structures
-                        let imagesToDelete = [];
-                        
-                        // Handle new processedImages structure
-                        if (listingData.processedImages && listingData.processedImages.length > 0) {
-                            // For new structure, we need to delete both thumb and large versions
-                            listingData.processedImages.forEach(img => {
-                                if (img.thumb) imagesToDelete.push(img.thumb);
-                                if (img.large) imagesToDelete.push(img.large);
-                            });
-                        } else if (listingData.processedImageUrls) {
-                            // Handle old single processed image structure
-                            if (listingData.processedImageUrls.thumb) imagesToDelete.push(listingData.processedImageUrls.thumb);
-                            if (listingData.processedImageUrls.large) imagesToDelete.push(listingData.processedImageUrls.large);
-                        } else if (listingData.imageUrls) {
-                            // Handle old multi-image array
-                            imagesToDelete = listingData.imageUrls;
-                        } else if (listingData.imageUrl) {
-                            // Handle very old single image
-                            imagesToDelete = [listingData.imageUrl];
-                        }
-                        
-                        const deletePromises = imagesToDelete.map(url => {
-                            if (url) {
-                                return storage.refFromURL(url).delete().catch(err => {
-                                    console.warn(`Failed to delete image: ${err.message}`);
-                                    return Promise.resolve(); // Continue even if image deletion fails
-                                });
-                            }
-                            return Promise.resolve();
-                        });
-
-                        Promise.allSettled(deletePromises)
-                            .then(results => {
-                                results.forEach((result, index) => {
-                                    if (result.status === 'rejected') {
-                                        console.warn(`Failed to delete image ${index + 1}:`, result.reason);
-                                    }
-                                });
-                                // Then, delete the Firestore document
-                                db.collection('listings').doc(listingId).delete().then(() => {
-                                    alert('Listing deleted successfully.');
-                                    document.getElementById('home-link').click();
-                                }).catch(err => {
-                                    console.error("Error deleting document:", err);
-                                    alert("Could not delete listing data. Please try again.");
-                                });
-                            });
-                    }
-                });
-            }
         } else {
             alert("This listing may have been deleted.");
             document.getElementById('home-link').click();
