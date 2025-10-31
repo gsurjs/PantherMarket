@@ -64,8 +64,17 @@ const createListingHTML = `
         <label for="listing-image">Upload Images (Up to 4):</label>
         <input type="file" id="listing-image" accept="image/*" multiple required>
 
+        <div id="analysis-progress-container" style="display: none;">
+            <p id="analysis-progress-label">Analyzing...</p>
+            <progress id="analysis-progress-bar" value="0" max="100"></progress>
+        </div>
+
         <button type="button" id="analyze-image-btn" class="ai-button" disabled>✨ Get AI Suggestions</button>
         <p id="ai-status" class="form-status"></p>
+
+        <div id="ai-progress-container" style="display: none;">
+            <progress id="ai-progress-bar" class="ai-progress"></progress>
+        </div>
 
         <div id="image-preview-container"></div>
 
@@ -630,6 +639,13 @@ function addListingFormListener(auth, db, storage) {
     const analyzeBtn = document.getElementById('analyze-image-btn');
     const aiStatus = document.getElementById('ai-status');
 
+    // --- AI analysis progress bar elements ---
+    const analysisProgressContainer = document.getElementById('analysis-progress-container');
+    const analysisProgressBar = document.getElementById('analysis-progress-bar');
+    const analysisProgressLabel = document.getElementById('analysis-progress-label');
+
+    const aiProgressContainer = document.getElementById('ai-progress-container');
+
     // Array to store all selected files for upload.
     let filesToUpload = [];
 
@@ -646,11 +662,10 @@ function addListingFormListener(auth, db, storage) {
                 try {
                     const base64Image = reader.result.split(',')[1];
                     const functions = firebase.functions();
-                    const analyzeImage = functions.httpsCallable('analyzeImageForSuggestions');
 
-                    // We call the function. We don't care about the *suggestions* here,
-                    // we only care if it *succeeds* (safe) or *fails* (unsafe).
-                    await analyzeImage({ image: base64Image });
+                    const checkSafety = functions.httpsCallable('checkImageSafety');
+                                        
+                    await checkSafety({ image: base64Image });
 
                     // If it succeeds, the image is safe.
                     resolve({ safe: true, file: file });
@@ -892,45 +907,60 @@ function addListingFormListener(auth, db, storage) {
         e.preventDefault();
     }
 
-    // Event listener for file input changes, runs safety check automatically for each file
+    /**
+     * This now runs the safety check AND shows the new progress bar.
+     */
     imageInput.addEventListener('change', async (event) => {
         formError.textContent = ''; // Clear previous errors
+        aiStatus.textContent = ''; // Clear AI status
         const newFiles = Array.from(event.target.files);
 
         if (newFiles.length === 0) return;
 
-        // --- Provide user feedback during analysis ---
-        aiStatus.textContent = "Analyzing images, please wait...";
-        aiStatus.style.color = '#333';
-        submitBtn.disabled = true; // Disable submit while checking
-        imageInput.disabled = true; // Prevent adding more files during check
+        // --- Show and configure the analysis progress bar ---
+        analysisProgressContainer.style.display = 'block';
+        analysisProgressBar.value = 0;
+        analysisProgressBar.max = newFiles.length;
+        analysisProgressLabel.textContent = `Analyzing image 1 of ${newFiles.length}...`;
         
-        // Create an array of validation promises
-        const validationPromises = newFiles.map(validateImageSafety);
-
-        // Run all safety checks in parallel for speed
-        const results = await Promise.all(validationPromises);
-
+        submitBtn.disabled = true;
+        imageInput.disabled = true;
+        
+        let completedFiles = 0;
         let errorMessages = [];
         let allFilesSafe = true;
 
-        for (const result of results) {
-            if (result.safe) {
-                // Image is safe, add it to the queue if there's space
-                if (filesToUpload.length < 4) {
-                    filesToUpload.push(result.file);
+        // We wrap the safety check to report progress as each promise resolves
+        const validationPromises = newFiles.map((file, index) => {
+            return validateImageSafety(file).then(result => {
+                // This 'then' block runs as soon as *one* check finishes
+                completedFiles++;
+                analysisProgressBar.value = completedFiles;
+                analysisProgressLabel.textContent = `Analyzed ${completedFiles} of ${newFiles.length}...`;
+                
+                // Now, handle the result of this one file
+                if (result.safe) {
+                    if (filesToUpload.length < 4) {
+                        filesToUpload.push(result.file);
+                    } else {
+                        errorMessages.push(`Max 4 images. '${result.file.name}' was not added.`);
+                        allFilesSafe = false;
+                    }
                 } else {
-                    errorMessages.push(`You can upload a max of 4 images. '${result.file.name}' was not added.`);
+                    errorMessages.push(`<b>${result.file.name}</b> rejected: ${result.reason}`);
                     allFilesSafe = false;
                 }
-            } else {
-                // Image is unsafe, add to error list
-                errorMessages.push(`<b>${result.file.name}</b> rejected: ${result.reason}`);
-                allFilesSafe = false;
-            }
-        }
+                
+                return result; // Pass the result along
+            });
+        });
 
-        // --- Update UI after analysis is complete ---
+        // Wait for all the wrapped promises to finish
+        const results = await Promise.all(validationPromises);
+
+        // --- Update UI after all analysis is complete ---
+        analysisProgressContainer.style.display = 'none'; // Hide progress bar
+        
         if (errorMessages.length > 0) {
             formError.innerHTML = errorMessages.join('<br>');
         }
@@ -944,15 +974,17 @@ function addListingFormListener(auth, db, storage) {
         } else if (!allFilesSafe) {
             aiStatus.textContent = "❌ Some images were rejected.";
             aiStatus.style.color = 'red';
-        } else {
-            aiStatus.textContent = ""; // Clear status if no files were added
         }
 
         analyzeBtn.disabled = filesToUpload.length === 0;
-        submitBtn.disabled = false; // Re-enable submit
-        imageInput.disabled = false; // Re-enable file input
+        submitBtn.disabled = false;
+        imageInput.disabled = false;
     });
-    // --- Event listener for the "Get AI Suggestions" button ---
+
+    
+    /**
+     * This now shows the new indeterminate progress bar during analysis.
+     */
     analyzeBtn.addEventListener('click', async () => {
         if (filesToUpload.length === 0) {
             formError.textContent = "Please select an image first.";
@@ -960,25 +992,25 @@ function addListingFormListener(auth, db, storage) {
         }
 
         const fileToAnalyze = filesToUpload[0]; // Always analyze the first image
-        aiStatus.textContent = "Analyzing, please wait...";
+        aiStatus.textContent = "Analyzing for suggestions, please wait...";
         aiStatus.style.color = '#333';
         analyzeBtn.disabled = true;
+        
+        // --- NEW: Show the AI progress bar ---
+        aiProgressContainer.style.display = 'block';
 
         const reader = new FileReader();
         reader.readAsDataURL(fileToAnalyze);
         reader.onload = async () => {
             try {
-                // Remove the data URL prefix 
                 const base64Image = reader.result.split(',')[1];
                 
-                // Initialize the Cloud Function callable
+                // This still calls the "heavy" function, which is correct
                 const functions = firebase.functions();
                 const analyzeImage = functions.httpsCallable('analyzeImageForSuggestions');
 
-                // Call the function and await the result
                 const result = await analyzeImage({ image: base64Image });
 
-                // Populate form fields with the suggestions
                 document.getElementById('listing-title').value = result.data.title || '';
                 document.getElementById('listing-desc').value = result.data.description || '';
                 
@@ -989,13 +1021,14 @@ function addListingFormListener(auth, db, storage) {
                 console.error("Error calling analyzeImage function:", error);
                 aiStatus.textContent = `❌ Error: ${error.message}`;
                 aiStatus.style.color = 'red';
-                // If inappropriate, remove the bad image and re-render
                 if (error.code === 'permission-denied') {
                     filesToUpload.shift(); // Removes the first item
                     renderPreviews();
                 }
             } finally {
-                analyzeBtn.disabled = filesToUpload.length === 0; // Re-enable if images still exist
+                // --- Hide the AI progress bar ---
+                aiProgressContainer.style.display = 'none';
+                analyzeBtn.disabled = filesToUpload.length === 0;
             }
         };
         reader.onerror = (error) => {
@@ -1003,6 +1036,8 @@ function addListingFormListener(auth, db, storage) {
              aiStatus.textContent = "❌ Error: Could not read the image file.";
              aiStatus.style.color = 'red';
              analyzeBtn.disabled = false;
+             // --- Hide the AI progress bar on failure too ---
+             aiProgressContainer.style.display = 'none';
         };
     });
 
@@ -1010,7 +1045,6 @@ function addListingFormListener(auth, db, storage) {
     listingForm.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        // --- All validation logic remains the same ---
         if (!user) {
             formError.textContent = "You must be logged in to create a listing.";
             return;
@@ -1047,7 +1081,6 @@ function addListingFormListener(auth, db, storage) {
         let docRef = null;
 
         try {
-            // --- NEW WORKFLOW STARTS HERE ---
 
             // 1. Create a placeholder document in Firestore first to get a unique ID.
             docRef = await db.collection("listings").add({
