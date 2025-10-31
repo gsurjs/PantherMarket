@@ -662,6 +662,140 @@ form textarea {
     border-color: #0050e6;
 }
 
+/* --- Dashboard Card ("My Listings" tab) --- */
+.my-listing-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: default; /* Not clickable like main cards */
+}
+
+.my-listing-card-actions {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #f0f0f0;
+    display: flex;
+    gap: 10px;
+}
+
+.my-listing-card-actions button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9em;
+    flex-grow: 1;
+}
+
+.mark-as-sold-btn {
+    background-color: #28a745;
+}
+.mark-as-sold-btn:hover {
+    background-color: #218838;
+}
+
+.edit-listing-btn {
+    background-color: #ffc107;
+    color: #212529;
+}
+.edit-listing-btn:hover {
+    background-color: #e0a800;
+}
+
+.listing-sold-badge {
+    display: block;
+    width: 100%;
+    text-align: center;
+    font-weight: 600;
+    color: #777;
+    font-size: 0.9em;
+    padding: 0.5rem;
+}
+
+/* --- "My Orders" Tab --- */
+.order-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.order-card-info h4 {
+    font-size: 1.2em;
+    margin-bottom: 0.5rem;
+}
+
+.order-card-info p {
+    font-size: 0.9em;
+    color: #555;
+    margin: 2px 0;
+}
+
+.leave-review-btn {
+    background: #007bff;
+}
+.leave-review-btn:hover {
+    background: #0056b3;
+}
+
+/* --- "My Reviews" Tab --- */
+.review-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1rem;
+}
+
+.review-card-rating {
+    font-size: 1.2rem;
+    margin-bottom: 0.5rem;
+}
+
+.review-card-comment {
+    font-style: italic;
+    font-size: 1.1em;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.review-card-buyer {
+    font-size: 0.9em;
+    color: #777;
+}
+
+/* --- "Create Review" Form --- */
+.star-rating-input {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin: 1rem 0;
+}
+
+.star-rating-input .stars {
+    font-size: 2rem;
+    direction: rtl; /* Makes stars fill right-to-left */
+}
+
+.star-rating-input .stars span {
+    color: #ccc;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.star-rating-input .stars:hover span {
+    color: #ffd700;
+}
+
+.star-rating-input .stars span:hover ~ span {
+    color: #ffd700;
+}
+
+.star-rating-input .stars span.filled {
+    color: #ffd7or;
+}
+
 /* --- Upload Progress --- */
 /* 1. Shared styling for all progress bar containers */
 #upload-progress-container,
@@ -869,6 +1003,27 @@ body.dark-mode .drag-handle {
 
 .dark-mode .trade-info {
     color: #20c997;
+}
+.dark-mode .my-listing-card-actions {
+    border-top-color: #3a3a3a;
+}
+.dark-mode .listing-sold-badge {
+    color: #aaa;
+}
+
+.dark-mode .order-card,
+.dark-mode .review-card {
+    background: #2a2a2a;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.dark-mode .order-card-info p,
+.dark-mode .review-card-buyer {
+    color: #aaa;
+}
+
+.dark-mode .review-card-comment {
+    color: #e0e0e0;
 }
 
 /* --- Media Queries for Responsiveness --- */

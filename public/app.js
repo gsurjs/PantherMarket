@@ -149,12 +149,6 @@ const itemDetailsHTML = (listing, isOwner) => {
         ${listing.isTrade ? `<p class="trade-info">🔄 This seller is open to trades.</p>` : ''}
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
-        ${isOwner ? `
-            <div class="owner-actions">
-                <button id="edit-listing-btn">Edit</button>
-                <button id="delete-listing-btn">Delete</button>
-            </div>
-        ` : ''}
     </div>
     `;
 };
@@ -206,6 +200,88 @@ const userDashboardHTML = `
         <div id="my-listings-grid" class="listings-grid"></div>
     </div>
 `;
+const myListingCardHTML = (listing, id) => {
+    let imageUrl = "https://via.placeholder.com/400x400.png?text=No+Image";
+    if (listing.processedImages && listing.processedImages.length > 0 && listing.processedImages[0].thumb) {
+        imageUrl = listing.processedImages[0].thumb;
+    }
+
+    return `
+    <div class="listing-card my-listing-card" data-id="${id}">
+        <img src="${imageUrl}" alt="${listing.title}">
+        <div class="listing-card-info">
+            <h3>${listing.title}</h3>
+            <p>$${listing.price} ${listing.isTrade ? '<span class="trade-badge">🔄 Trade</span>' : ''}</p>
+        </div>
+        <div class="my-listing-card-actions">
+            ${listing.status === 'active' ? 
+            `<button class="mark-as-sold-btn" data-id="${id}">Mark as Sold</button>
+             <button class="edit-listing-btn" data-id="${id}">Edit</button>` 
+            : 
+            `<span class="listing-sold-badge">SOLD</span>`
+            }
+        </div>
+    </div>
+    `;
+};
+
+// --- Card for the "My Orders" tab ---
+const orderCardHTML = (order, id) => `
+    <div class="order-card" data-id="${id}">
+        <div class="order-card-info">
+            <h4>${order.listingTitle}</h4>
+            <p>Sold by: ${order.sellerEmail}</p>
+            <p>Price: $${order.purchasePrice}</p>
+            <p>Status: ${order.status}</p>
+        </div>
+        <div class="order-card-actions">
+            ${order.status === 'completed' ? // Only allow review if completed
+            `<button class="leave-review-btn" data-id="${id}">Leave Review</button>`
+            : ''}
+        </div>
+    </div>
+`;
+
+// --- Form for creating a review ---
+const createReviewHTML = (listingTitle) => `
+    <h2>Leave a Review for: ${listingTitle}</h2>
+    <form id="create-review-form">
+        <div class="star-rating-input">
+            <label>Rating:</label>
+            <div class="stars">
+                <span data-value="5">★</span>
+                <span data-value="4">★</span>
+                <span data-value="3">★</span>
+                <span data-value="2">★</span>
+                <span data-value="1">★</span>
+            </div>
+            <input type="hidden" id="review-rating" value="0" required>
+        </div>
+        <textarea id="review-comment" placeholder="Leave a comment (optional)"></textarea>
+        <button type="submit">Submit Review</button>
+        <button type="button" id="cancel-review-btn">Cancel</button>
+    </form>
+    <p id="form-error" class="error"></p>
+`;
+
+// --- Card for the "My Reviews" tab ---
+const reviewCardHTML = (review) => {
+    // Generate stars HTML
+    let starsHTML = '';
+    for (let i = 1; i <= 5; i++) {
+        starsHTML += `<span class="star ${i <= review.rating ? 'filled' : ''}">★</span>`;
+    }
+
+    return `
+    <div class="review-card">
+        <div class="review-card-rating">
+            ${starsHTML}
+        </div>
+        <p class="review-card-comment">"${review.comment}"</p>
+        <p class="review-card-buyer">From: ${review.buyerEmail || 'Anonymous'}</p>
+    </div>
+    `;
+};
 
 function renderWelcomeView(user, auth, db, storage) {
     appContent.innerHTML = welcomeHTML(user);
@@ -499,33 +575,23 @@ async function renderUserDashboard(auth, db, storage) {
     const user = auth.currentUser;
     if (!user) return;
 
-    // Save state
     sessionStorage.setItem('currentView', 'dashboard');
-    
-    // Hide the main app content to show our new view
-    document.getElementById('app-content').style.display = 'block';
     appContent.innerHTML = userDashboardHTML;
-    
-    // Use the main listings section for this view
-    const listingsSection = document.getElementById('listings-section');
-    listingsSection.style.display = 'none'; // We're using appContent
+    listingsSection.style.display = 'none'; // Hide main listings
     
     const myGrid = document.getElementById('my-listings-grid');
+    const dashboardContent = document.querySelector('.dashboard-content');
 
     // --- 1. Load User Profile Data ---
     const userRef = db.collection('users').doc(user.uid);
     const userDoc = await userRef.get();
-
     if (userDoc.exists) {
         const userData = userDoc.data();
         document.getElementById('user-email').textContent = userData.email;
-
         const averageRating = userData.averageRating || 0;
         const reviewCount = userData.reviewCount || 0;
-        
         const ratingContainer = document.getElementById('user-rating-container');
         if (reviewCount > 0) {
-            // Display stars
             ratingContainer.style.display = 'inline-block';
             let starsHTML = '';
             const filledStars = Math.round(averageRating);
@@ -533,45 +599,236 @@ async function renderUserDashboard(auth, db, storage) {
                 starsHTML += `<span class="star ${i <= filledStars ? 'filled' : ''}">★</span>`;
             }
             ratingContainer.innerHTML = starsHTML;
-            
-            // Display review count
             const reviewText = reviewCount === 1 ? '1 review' : `${reviewCount} reviews`;
             document.getElementById('user-review-count').textContent = `(${reviewText})`;
         }
     } else {
-        // Fallback if user doc doesn't exist (shouldn't happen)
         document.getElementById('user-email').textContent = user.email;
     }
 
-    // --- 2. Load "My Listings" (this is your old renderMyListings logic) ---
-    db.collection('listings')
-        .where('sellerId', '==', user.uid)
-        .orderBy('createdAt', 'desc')
-        .onSnapshot((querySnapshot) => {
-            myGrid.innerHTML = ''; // Clear the grid on each update
-            
-            if (querySnapshot.empty) {
-                myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
-                return;
-            }
-
-            querySnapshot.forEach(doc => {
-                myGrid.innerHTML += listingCardHTML(doc.data(), doc.id);
+    // --- Load "My Listings" by default ---
+    const loadMyListings = () => {
+        db.collection('listings')
+            .where('sellerId', '==', user.uid)
+            .orderBy('createdAt', 'desc')
+            .onSnapshot((querySnapshot) => {
+                myGrid.innerHTML = ''; // Clear the grid
+                if (querySnapshot.empty) {
+                    myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+                    return;
+                }
+                querySnapshot.forEach(doc => {
+                    // Use the NEW myListingCardHTML
+                    myGrid.innerHTML += myListingCardHTML(doc.data(), doc.id);
+                });
+            }, (error) => {
+                console.error("Error fetching user's listings:", error);
+                myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
             });
+    };
+    loadMyListings(); // Load it on first view
 
-            addCardEventListeners(auth, db, storage);
-
-        }, (error) => {
-            console.error("Error fetching user's listings:", error);
-            myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
-        });
+    // --- Add Listeners for Dashboard UI ---
     
-    // --- 3. (Optional) Add Tab Listeners (we can build these out next) ---
-    document.getElementById('tab-my-orders').addEventListener('click', () => {
-        alert("Feature coming soon!");
+    // Efficiently handle all button clicks on the grid
+    myGrid.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const listingId = target.dataset.id;
+
+        if (target.classList.contains('mark-as-sold-btn')) {
+            const buyerEmail = prompt("Please enter the buyer's GSU email address:");
+            if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
+                const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
+                target.textContent = "Processing...";
+                target.disabled = true;
+                
+                markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
+                    .then(result => {
+                        alert("Listing successfully marked as sold!");
+                    })
+                    .catch(error => {
+                        console.error("Error marking as sold:", error);
+                        alert(`Error: ${error.message}`);
+                        target.textContent = "Mark as Sold";
+                        target.disabled = false;
+                    });
+            } else if (buyerEmail) {
+                alert("Invalid GSU email address.");
+            }
+        }
+
+        if (target.classList.contains('edit-listing-btn')) {
+            db.collection('listings').doc(listingId).get().then(doc => {
+                if (doc.exists) {
+                    sessionStorage.setItem('currentView', 'editListing');
+                    appContent.innerHTML = editListingHTML(doc.data());
+                    addEditFormListener(auth, db, storage, listingId);
+                }
+            });
+        }
     });
-    document.getElementById('tab-my-reviews').addEventListener('click', () => {
-        alert("Feature coming soon!");
+
+    // Handle clicks on the content area (for "Leave Review")
+    dashboardContent.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target || !target.classList.contains('leave-review-btn')) return;
+
+        const orderId = target.dataset.id;
+        renderCreateReviewForm(auth, db, storage, orderId);
+    });
+
+    // Handle tab switching
+    const tabs = document.querySelectorAll('.dashboard-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+
+            if (tab.id === 'tab-my-listings') {
+                myGrid.style.display = 'grid'; // Show grid
+                dashboardContent.innerHTML = ''; // Clear other content
+                dashboardContent.appendChild(myGrid); // Move grid into content
+                loadMyListings(); // Reload listings
+            } else if (tab.id === 'tab-my-orders') {
+                myGrid.style.display = 'none'; // Hide grid
+                renderMyOrders(auth, db, storage, dashboardContent);
+            } else if (tab.id === 'tab-my-reviews') {
+                myGrid.style.display = 'none'; // Hide grid
+                renderMyReviews(auth, db, storage, dashboardContent);
+            }
+        });
+    });
+}
+
+// --- Renders the "My Orders" Tab ---
+async function renderMyOrders(auth, db, storage, containerElement) {
+    const user = auth.currentUser;
+    containerElement.innerHTML = '<h2>My Orders</h2>'; // Set title
+
+    try {
+        const querySnapshot = await db.collection('orders')
+            .where('buyerId', '==', user.uid)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        if (querySnapshot.empty) {
+            containerElement.innerHTML += '<p>You have not purchased any items yet.</p>';
+            return;
+        }
+
+        querySnapshot.forEach(doc => {
+            containerElement.innerHTML += orderCardHTML(doc.data(), doc.id);
+        });
+
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+        containerElement.innerHTML += '<p class="error">Could not load your orders.</p>';
+    }
+}
+
+// --- Renders the "My Reviews" Tab ---
+async function renderMyReviews(auth, db, storage, containerElement) {
+    const user = auth.currentUser;
+    containerElement.innerHTML = '<h2>Reviews About You</h2>'; // Set title
+
+    try {
+        const querySnapshot = await db.collection('reviews')
+            .where('revieweeId', '==', user.uid)
+            .orderBy('createdAt', 'desc')
+            .get();
+
+        if (querySnapshot.empty) {
+            containerElement.innerHTML += '<p>You have not received any reviews yet.</p>';
+            return;
+        }
+
+        querySnapshot.forEach(doc => {
+            containerElement.innerHTML += reviewCardHTML(doc.data());
+        });
+
+    } catch (error) {
+        console.error("Error fetching reviews:", error);
+        containerElement.innerHTML += '<p class="error">Could not load your reviews.</p>';
+    }
+}
+
+// --- Renders the "Create Review" Form ---
+async function renderCreateReviewForm(auth, db, storage, orderId) {
+    const user = auth.currentUser;
+    
+    // 1. Get the order details
+    const orderRef = db.collection('orders').doc(orderId);
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) {
+        alert("Error: Order not found.");
+        return;
+    }
+    const order = orderDoc.data();
+
+    // 2. Check if a review already exists
+    const reviewQuery = await db.collection('reviews').where('orderId', '==', orderId).limit(1).get();
+    if (!reviewQuery.empty) {
+        alert("You have already left a review for this order.");
+        return;
+    }
+
+    // 3. Show the form
+    appContent.innerHTML = createReviewHTML(order.listingTitle);
+
+    // 4. Add star rating listeners
+    const stars = document.querySelectorAll('.star-rating-input .stars span');
+    const ratingInput = document.getElementById('review-rating');
+    stars.forEach(star => {
+        star.addEventListener('click', () => {
+            const ratingValue = star.dataset.value;
+            ratingInput.value = ratingValue;
+            // Highlight selected stars
+            stars.forEach(s => {
+                s.classList.toggle('filled', s.dataset.value <= ratingValue);
+            });
+        });
+    });
+
+    // 5. Add form submit listener
+    document.getElementById('create-review-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const rating = parseInt(ratingInput.value, 10);
+        const comment = document.getElementById('review-comment').value;
+
+        if (rating === 0) {
+            document.getElementById('form-error').textContent = "Please select a rating.";
+            return;
+        }
+
+        // Create the new review document
+        db.collection('reviews').add({
+            orderId: orderId,
+            listingId: order.listingId,
+            rating: rating,
+            comment: comment,
+            revieweeId: order.sellerId, // The user being reviewed
+            reviewerId: user.uid,      // The user writing the review
+            buyerEmail: user.email,    // For display
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+            alert("Review submitted! Thank you.");
+            // Mark the order as 'reviewed' so the button disappears
+            orderRef.update({ status: 'reviewed' });
+            // Go back to the dashboard
+            renderUserDashboard(auth, db, storage);
+        })
+        .catch(error => {
+            console.error("Error submitting review:", error);
+            document.getElementById('form-error').textContent = "Failed to submit review.";
+        });
+    });
+
+    // 6. Cancel button
+    document.getElementById('cancel-review-btn').addEventListener('click', () => {
+        renderUserDashboard(auth, db, storage);
     });
 }
 
