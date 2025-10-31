@@ -2,7 +2,6 @@
 const navLinks = document.getElementById('nav-links');
 const appContent = document.getElementById('app-content');
 const listingsGrid = document.getElementById('listings-grid');
-// --- THIS IS THE FIX ---
 const listingsSection = document.getElementById('listings-section');
 
 // --- HTML TEMPLATES ---
@@ -578,9 +577,6 @@ async function renderUserDashboard(auth, db, storage) {
 
     sessionStorage.setItem('currentView', 'dashboard');
     appContent.innerHTML = userDashboardHTML;
-    // --- THIS IS A BUG ---
-    // listingsSection is not defined in this scope.
-    // We need to define it at the top of the file.
     listingsSection.style.display = 'none'; // Hide main listings
     
     // Find the empty container
@@ -639,10 +635,77 @@ async function renderUserDashboard(auth, db, storage) {
     });
 
     // --- 3. Load "My Listings" Tab by default ---
-    // --- THIS IS A BUG ---
-    // The function renderMyListingsTab is not defined anywhere.
-    // It was supposed to be pasted in.
     renderMyListingsTab(auth, db, storage, dashboardContent);
+}
+
+// --- NEW FUNCTION: Renders the "My Listings" Tab ---
+function renderMyListingsTab(auth, db, storage, containerElement) {
+    const user = auth.currentUser;
+    containerElement.innerHTML = '<h2>My Listings</h2>'; // Set title
+    
+    // Create the grid
+    const myGrid = document.createElement('div');
+    myGrid.id = 'my-listings-grid';
+    myGrid.className = 'listings-grid';
+    containerElement.appendChild(myGrid);
+
+    myGrid.addEventListener('click', (e) => {
+        const target = e.target.closest('button');
+        if (!target) return;
+
+        const listingId = target.dataset.id;
+
+        if (target.classList.contains('mark-as-sold-btn')) {
+            const buyerEmail = prompt("Please enter the buyer's GSU email address:");
+            if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
+                const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
+                target.textContent = "Processing...";
+                target.disabled = true;
+                
+                markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
+                    .then(result => {
+                        alert("Listing successfully marked as sold!");
+                    })
+                    .catch(error => {
+                        console.error("Error marking as sold:", error);
+                        alert(`Error: ${error.message}`);
+                        target.textContent = "Mark as Sold";
+                        target.disabled = false;
+                    });
+            } else if (buyerEmail) {
+                alert("Invalid GSU email address.");
+            }
+        }
+
+        if (target.classList.contains('edit-listing-btn')) {
+            db.collection('listings').doc(listingId).get().then(doc => {
+                if (doc.exists) {
+                    sessionStorage.setItem('currentView', 'editListing');
+                    sessionStorage.setItem('currentItemId', listingId); // This was the other bug fix
+                    appContent.innerHTML = editListingHTML(doc.data());
+                    addEditFormListener(auth, db, storage, listingId);
+                }
+            });
+        }
+    });
+
+    // --- This loads the listings into the grid ---
+    db.collection('listings')
+        .where('sellerId', '==', user.uid)
+        .orderBy('createdAt', 'desc')
+        .onSnapshot((querySnapshot) => {
+            myGrid.innerHTML = ''; // Clear the grid
+            if (querySnapshot.empty) {
+                myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+                return;
+            }
+            querySnapshot.forEach(doc => {
+                myGrid.innerHTML += myListingCardHTML(doc.data(), doc.id);
+            });
+        }, (error) => {
+            console.error("Error fetching user's listings:", error);
+            myGrid.innerHTML = '<p class="error">Could not load your listings.</p>';
+        });
 }
 
 // --- Renders the "My Orders" Tab ---
@@ -813,40 +876,6 @@ function showItemDetails(auth, db, storage, listingId) {
                     document.getElementById('home-link').click();
                 }
             });
-            
-            // --- THIS IS A BUG ---
-            // This code is "dead" and tries to find buttons
-            // that do not exist on this page, causing a crash.
-            if (isOwner) {
-                document.getElementById('edit-listing-btn').addEventListener('click', () => {
-                    sessionStorage.setItem('currentView', 'editListing');
-                    appContent.innerHTML = editListingHTML(listingData);
-                    addEditFormListener(auth, db, storage, listingId);
-                });
-
-                document.getElementById('delete-listing-btn').addEventListener('click', () => {
-                    if (confirm('Are you sure you want to delete this listing?')) {
-                        // Delete from Firestore
-                        db.collection('listings').doc(listingId).delete()
-                            .then(() => {
-                                alert('Listing deleted successfully.');
-                                document.getElementById('home-link').click(); 
-                                // Also delete images from Storage
-                                const imagePath = `listings/${currentUser.uid}/${listingId}`;
-                                const storageRef = storage.ref(imagePath);
-                                // This is a simple delete. A full solution would
-                                // list all files in the directory and delete them.
-                                // For now, we assume we know the file names if needed
-                                // or just delete the "folder". This is complex.
-                                // A simpler cloud function on delete is better.
-                            })
-                            .catch(error => {
-                                console.error('Error deleting listing:', error);
-                                alert('Failed to delete listing.');
-                            });
-                    }
-                });
-            }
             
         } else {
             alert("This listing may have been deleted.");
@@ -1580,4 +1609,3 @@ function setupTheme() {
 // --- START THE APP ---
 initializeApp();
 setupTheme();
-}
