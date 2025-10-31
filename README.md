@@ -53,7 +53,7 @@ This project uses a modern single-page application (SPA) architecture, built on 
 
 1.  **Clone the Repository:**
     ```bash
-    git clone [https://github.com/gsurjs/panthermarket.git](https://github.com/gsurjs/panthermarket.git)
+    git clone https://github.com/gsurjs/panthermarket.git
     cd panthermarket
     ```
 
