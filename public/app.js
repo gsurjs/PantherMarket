@@ -930,7 +930,7 @@ async function showItemDetails(auth, db, storage, listingId) {
             } catch (err) {
                 console.warn("Could not fetch seller rating:", err);
             }
-            
+
             const isOwner = currentUser && currentUser.uid === listingData.sellerId;
 
             document.getElementById('app-content').style.display = 'block';
@@ -1028,7 +1028,7 @@ async function showItemDetails(auth, db, storage, listingId) {
             alert("This listing may have been deleted.");
             document.getElementById('home-link').click();
         }
-    } catch(error => {
+    } catch(error) => {
         console.error("Error fetching item details:", error);
         alert("Could not load listing details.");
     }
