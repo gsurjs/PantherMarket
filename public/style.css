@@ -1309,6 +1309,10 @@ body.dark-mode .drag-handle {
     #image-preview-container {
         justify-content: center;
     }
+    
+    .profile-info h2 {
+        font-size: 1.4rem;
+    }
 }
 
 @media (max-width: 400px) {
