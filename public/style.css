@@ -1278,8 +1278,11 @@ body.dark-mode .drag-handle {
     }
 
     .dashboard-tab {
-        padding: 0.6rem 1rem;
-        font-size: 0.9rem;
+        padding: 0.6rem 0.75rem;
+        font-size: 0.85rem;
+    }
+    .dashboard-nav-tabs {
+        gap: 8px; /* Reduced gap from 10px to 8px */
     }
     
     /* Mobile - Image preview adjustments */
