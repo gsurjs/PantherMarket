@@ -660,6 +660,8 @@ async function renderUserDashboard(auth, db, storage) {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
+            tab.parentElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
             if (tab.id === 'tab-my-listings') {
                 renderMyListingsTab(auth, db, storage, dashboardContent); // <-- UPDATED
             } else if (tab.id === 'tab-my-orders') {
