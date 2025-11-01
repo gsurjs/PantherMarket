@@ -905,14 +905,17 @@ async function renderCreateReviewForm(auth, db, storage, orderId) {
 }
 
 // reusable function that renders the details page AND attaches all button listeners.
-function showItemDetails(auth, db, storage, listingId) {
+async function showItemDetails(auth, db, storage, listingId) {
     sessionStorage.setItem('currentView', 'itemDetails');
     sessionStorage.setItem('currentItemId', listingId);
 
-    db.collection('listings').doc(listingId).get({ source: 'server' }).then(doc => {
+    try { 
+        const doc = await db.collection('listings').doc(listingId).get({ source: 'server' });
+
         if (doc.exists) {
             const listingData = doc.data();
             const currentUser = auth.currentUser;
+
             let sellerRatingData = { avg: 0, count: 0 };
             try {
                 if (listingData.sellerId) {
@@ -926,8 +929,8 @@ function showItemDetails(auth, db, storage, listingId) {
                 }
             } catch (err) {
                 console.warn("Could not fetch seller rating:", err);
-                // Non-critical error, we can still show the page.
             }
+            
             const isOwner = currentUser && currentUser.uid === listingData.sellerId;
 
             document.getElementById('app-content').style.display = 'block';
@@ -1014,8 +1017,8 @@ function showItemDetails(auth, db, storage, listingId) {
 
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');
-                if (previousView === 'dashboard') { // <-- CHANGED
-                    document.getElementById('dashboard-link').click(); // <-- CHANGED
+                if (previousView === 'dashboard') { 
+                    document.getElementById('dashboard-link').click();
                 } else {
                     document.getElementById('home-link').click();
                 }
@@ -1025,10 +1028,10 @@ function showItemDetails(auth, db, storage, listingId) {
             alert("This listing may have been deleted.");
             document.getElementById('home-link').click();
         }
-    }).catch(error => {
+    } catch(error => {
         console.error("Error fetching item details:", error);
         alert("Could not load listing details.");
-    });
+    }
 }
 
 // --- FUNCTION TO ADD EDIT FORM LISTENER ---
