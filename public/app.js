@@ -116,7 +116,7 @@ const listingCardHTML = (listing, id) => {
     `;
 };
 
-const itemDetailsHTML = (listing, isOwner) => {
+const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) => {
     let images = ["https://via.placeholder.com/1280x1280.png?text=No+Image"];
     
     if (listing.processedImages && listing.processedImages.length > 0) {
@@ -150,6 +150,21 @@ const itemDetailsHTML = (listing, isOwner) => {
         ${listing.isTrade ? `<p class="trade-info">🔄 This seller is open to trades.</p>` : ''}
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
+        ${sellerRating.count > 0 ? `
+            <div class="item-details-rating">
+                ${[...Array(5)].map((_, i) => `
+                    <span class="star ${i < Math.round(sellerRating.avg) ? 'filled' : ''}">★</span>
+                `).join('')}
+                <span class="item-details-review-count">
+                    (${sellerRating.count} ${sellerRating.count === 1 ? 'review' : 'reviews'})
+                </span>
+            </div>
+        ` : `
+            <div class="item-details-rating">
+                <span class="item-details-review-count">(No reviews yet)</span>
+            </div>
+        `}
+
 
         ${isOwner ? `
         <div class="owner-actions">
@@ -890,20 +905,38 @@ async function renderCreateReviewForm(auth, db, storage, orderId) {
 }
 
 // reusable function that renders the details page AND attaches all button listeners.
-function showItemDetails(auth, db, storage, listingId) {
+async function showItemDetails(auth, db, storage, listingId) {
     sessionStorage.setItem('currentView', 'itemDetails');
     sessionStorage.setItem('currentItemId', listingId);
 
-    db.collection('listings').doc(listingId).get({ source: 'server' }).then(doc => {
+    try { 
+        const doc = await db.collection('listings').doc(listingId).get({ source: 'server' });
+
         if (doc.exists) {
             const listingData = doc.data();
             const currentUser = auth.currentUser;
+
+            let sellerRatingData = { avg: 0, count: 0 };
+            try {
+                if (listingData.sellerId) {
+                    const sellerRef = db.collection('users').doc(listingData.sellerId);
+                    const sellerDoc = await sellerRef.get();
+                    if (sellerDoc.exists) {
+                        const sellerData = sellerDoc.data();
+                        sellerRatingData.avg = sellerData.averageRating || 0;
+                        sellerRatingData.count = sellerData.reviewCount || 0;
+                    }
+                }
+            } catch (err) {
+                console.warn("Could not fetch seller rating:", err);
+            }
+            
             const isOwner = currentUser && currentUser.uid === listingData.sellerId;
 
             document.getElementById('app-content').style.display = 'block';
             document.getElementById('listings-section').style.display = 'none';
             // The updated itemDetailsHTML function is now called here
-            appContent.innerHTML = itemDetailsHTML(listingData, isOwner);
+            appContent.innerHTML = itemDetailsHTML(listingData, isOwner, sellerRatingData);
 
             const mainImage = document.getElementById('main-gallery-image');
             const thumbnails = document.querySelectorAll('.thumbnail-image');
@@ -984,8 +1017,8 @@ function showItemDetails(auth, db, storage, listingId) {
 
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');
-                if (previousView === 'dashboard') { // <-- CHANGED
-                    document.getElementById('dashboard-link').click(); // <-- CHANGED
+                if (previousView === 'dashboard') { 
+                    document.getElementById('dashboard-link').click();
                 } else {
                     document.getElementById('home-link').click();
                 }
@@ -995,10 +1028,10 @@ function showItemDetails(auth, db, storage, listingId) {
             alert("This listing may have been deleted.");
             document.getElementById('home-link').click();
         }
-    }).catch(error => {
+    } catch(error => {
         console.error("Error fetching item details:", error);
         alert("Could not load listing details.");
-    });
+    }
 }
 
 // --- FUNCTION TO ADD EDIT FORM LISTENER ---

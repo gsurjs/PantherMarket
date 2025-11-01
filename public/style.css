@@ -381,6 +381,26 @@ form textarea {
     opacity: 1;
 }
 
+.item-details-rating {
+    margin: -0.5rem 0 1rem 0;
+    font-size: 1.2rem;
+}
+
+/* Using the same star classes from the dashboard */
+.item-details-rating .star {
+    color: #ccc;
+}
+.item-details-rating .star.filled {
+    color: #ffd700;
+}
+
+.item-details-review-count {
+    font-size: 0.9em;
+    color: #888;
+    margin-left: 8px;
+    vertical-align: middle;
+}
+
 /* --- Image Upload Preview with Drag & Drop --- */
 #image-preview-container {
     display: flex;
@@ -662,6 +682,11 @@ form textarea {
     border-color: #0050e6;
 }
 
+/* Dark mode for the new rating */
+.dark-mode .item-details-review-count {
+    color: #aaa;
+}
+
 /* --- Dashboard Card ("My Listings" tab) --- */
 .my-listing-card {
     display: flex;
@@ -802,6 +827,8 @@ form textarea {
 .delete-listing-btn:hover {
     background-color: #c82333;
 }
+
+
 
 /* --- Upload Progress --- */
 /* 1. Shared styling for all progress bar containers */
