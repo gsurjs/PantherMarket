@@ -1071,13 +1071,19 @@ async function showItemDetails(auth, db, storage, listingId) {
                     try {
                         const reviewSnapshot = await db.collection('reviews')
                             .where('revieweeId', '==', listingData.sellerId)
-                            .orderBy('createdAt', 'desc')
                             .get();
 
                         if (reviewSnapshot.empty) {
                             modalList.innerHTML = '<p>This seller has no reviews yet.</p>';
                             return;
                         }
+
+                        const reviews = reviewSnapshot.docs.map(doc => doc.data());
+                        reviews.sort((a, b) => {
+                            const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                            const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+                            return timeB - timeA; // b - a for descending order
+                        });
 
                         modalList.innerHTML = ''; // Clear loading
                         reviewSnapshot.forEach(reviewDoc => {
