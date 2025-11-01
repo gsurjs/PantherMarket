@@ -826,6 +826,16 @@ form textarea {
     gap: 1rem;
 }
 
+.order-card-thumbnail {
+    width: 70px;
+    height: 70px;
+    object-fit: contain;
+    background: #fdfdfd;
+    border-radius: 6px;
+    border: 1px solid #f0f0f0;
+    flex-shrink: 0;
+}
+
 .order-card-info h4 {
     font-size: 1.2em;
     margin-bottom: 0.5rem;
@@ -1159,6 +1169,11 @@ body.dark-mode .drag-handle {
 
 .dark-mode .reviews-modal-list .review-card {
     border-bottom-color: #3a3a3a;
+}
+
+.dark-mode .order-card-thumbnail {
+    background: #2a2a2a;
+    border-color: #3a3a3a;
 }
 
 /* --- Media Queries for Responsiveness --- */

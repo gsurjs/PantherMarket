@@ -263,6 +263,7 @@ const myListingCardHTML = (listing, id) => {
 // --- Card for the "My Orders" tab ---
 const orderCardHTML = (order, id) => `
     <div class="order-card" data-id="${id}">
+    <img src="${order.listingThumbnail || 'https://via.placeholder.com/400x400.png?text=No+Image'}" alt="${order.listingTitle}" class="order-card-thumbnail">
         <div class="order-card-info">
             <h4>${order.listingTitle}</h4>
             <p>Sold by: ${order.sellerEmail}</p>
