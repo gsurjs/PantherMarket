@@ -1028,7 +1028,7 @@ async function showItemDetails(auth, db, storage, listingId) {
             alert("This listing may have been deleted.");
             document.getElementById('home-link').click();
         }
-    } catch(error) => {
+    } catch(error) {
         console.error("Error fetching item details:", error);
         alert("Could not load listing details.");
     }
