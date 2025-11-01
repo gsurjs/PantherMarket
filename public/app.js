@@ -1630,32 +1630,33 @@ function addCardEventListeners(auth, db, storage) {
     const listingCards = document.querySelectorAll('.listing-card');
     listingCards.forEach(card => {
         // Add the click event listener directly to the card
-        card.addEventListener('click', async (e) => { // Make async
+        card.addEventListener('click', async (e) => {
             e.preventDefault();
             const currentUser = auth.currentUser;
             const listingId = card.dataset.id;
 
-            // first check if user is lgoged out
             if (!currentUser) {
                 alert('You must be logged-in and verified to view details.');
-                return; // Stop the function here
+                return;
             }
 
-            // Use token-based verification check
-            const tokenResult = await currentUser.getIdTokenResult(false);
-            const isFullyVerified = tokenResult.claims.email_verified === true &&
-                                    tokenResult.claims.manuallyVerified === true;
+            try {
+                const tokenResult = await currentUser.getIdTokenResult(false);
+                const isFullyVerified = tokenResult.claims.email_verified === true &&
+                                        tokenResult.claims.manuallyVerified === true;
 
-            if (currentUser && isFullyVerified) {
-                // NEW: Save the previous view so the "Back" button knows where to go
-                const currentView = sessionStorage.getItem('currentView') || 'home';
-                sessionStorage.setItem('previousView', currentView);
+                if (isFullyVerified) {
+                    const currentView = sessionStorage.getItem('currentView') || 'home';
+                    sessionStorage.setItem('previousView', currentView);
 
-                // This function should ONLY call showItemDetails.
-                // All the duplicate code that was here has been removed.
-                showItemDetails(auth, db, storage, listingId);
-            } else {
-                alert('You must be logged-in and verified to view details.');
+                    showItemDetails(auth, db, storage, listingId);
+                } else {
+                    alert('You must be logged-in and verified to view details.');
+                }
+
+            } catch (error) {
+                console.error("Error checking user verification:", error);
+                alert("An error occurred while checking your verification status. Please try again.");
             }
         });
     });
