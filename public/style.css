@@ -858,7 +858,7 @@ progress[value]::-moz-progress-bar {
 
 
 /* 6. Special animated style for the indeterminate AI bar */
-progress.ai-progress::-webkit-progress-value {
+progress.ai-progress::-webkit-progress-bar {
     background: linear-gradient(90deg, #eee 30%, #55c5ff 50%, #eee 70%);
     background-size: 200% 100%;
     border-radius: 5px;
