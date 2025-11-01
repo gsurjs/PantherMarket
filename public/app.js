@@ -919,6 +919,35 @@ function showItemDetails(auth, db, storage, listingId) {
                 });
             });
 
+            const soldBtn = document.getElementById('mark-as-sold-btn-main');
+            if (soldBtn) {
+                soldBtn.addEventListener('click', () => {
+                    // This logic is copied from the dashboard
+                    const buyerEmail = prompt("Please enter the buyer's GSU email address:");
+                    if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
+
+                        const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
+                        soldBtn.textContent = "Processing...";
+                        soldBtn.disabled = true;
+
+                        markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
+                            .then(result => {
+                                alert("Listing successfully marked as sold!");
+                                // After selling, go back to the home page
+                                document.getElementById('home-link').click(); 
+                            })
+                            .catch(error => {
+                                console.error("Error marking as sold:", error);
+                                alert(`Error: ${error.message}`);
+                                soldBtn.textContent = "Mark as Sold";
+                                soldBtn.disabled = false;
+                            });
+                    } else if (buyerEmail) {
+                        alert("Invalid GSU email address.");
+                    }
+                });
+            }
+
             const editBtn = document.getElementById('edit-listing-btn-main');
             if (editBtn) {
                 editBtn.addEventListener('click', () => {
@@ -949,35 +978,6 @@ function showItemDetails(auth, db, storage, listingId) {
                             deleteBtn.textContent = "Delete Listing";
                             deleteBtn.disabled = false;
                         }
-                    }
-                });
-            }
-
-            const soldBtn = document.getElementById('mark-as-sold-btn-main');
-            if (soldBtn) {
-                soldBtn.addEventListener('click', () => {
-                    // This logic is copied from the dashboard
-                    const buyerEmail = prompt("Please enter the buyer's GSU email address:");
-                    if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
-
-                        const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
-                        soldBtn.textContent = "Processing...";
-                        soldBtn.disabled = true;
-
-                        markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
-                            .then(result => {
-                                alert("Listing successfully marked as sold!");
-                                // After selling, go back to the home page
-                                document.getElementById('home-link').click(); 
-                            })
-                            .catch(error => {
-                                console.error("Error marking as sold:", error);
-                                alert(`Error: ${error.message}`);
-                                soldBtn.textContent = "Mark as Sold";
-                                soldBtn.disabled = false;
-                            });
-                    } else if (buyerEmail) {
-                        alert("Invalid GSU email address.");
                     }
                 });
             }
