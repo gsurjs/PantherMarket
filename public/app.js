@@ -834,7 +834,6 @@ async function renderMyReviews(auth, db, storage, containerElement) {
     try {
         const querySnapshot = await db.collection('reviews')
             .where('revieweeId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
             .get();
 
         if (querySnapshot.empty) {
@@ -842,8 +841,18 @@ async function renderMyReviews(auth, db, storage, containerElement) {
             return;
         }
 
-        querySnapshot.forEach(doc => {
-            containerElement.innerHTML += reviewCardHTML(doc.data());
+        // --- Client-side sorting ---
+        const reviews = querySnapshot.docs.map(doc => doc.data());
+        reviews.sort((a, b) => {
+            const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+            const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+            return timeB - timeA; // b - a for descending order
+        });
+        // --- End sorting ---
+
+        // 3. Render the sorted reviews
+        reviews.forEach(review => {
+            containerElement.innerHTML += reviewCardHTML(review);
         });
 
     } catch (error) {
@@ -1775,7 +1784,7 @@ function addAuthFormListeners(auth, db) {
 
                 // You can still create a user profile in Firestore
                 await db.collection('users').doc(userCredential.user.uid).set({
-                    email: userCredential.user.email,
+                    email: email.toLowerCase().trim(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     isManuallyVerified: false
                 });
