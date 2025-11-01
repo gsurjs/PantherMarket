@@ -1177,6 +1177,11 @@ body.dark-mode .drag-handle {
         margin-bottom: 0.25rem;
     }
 
+    header h2 {
+        font-size: 1 rem;
+        marigin-bottom: 0.5rem;
+    }
+
     header h3 {
         font-size: 0.9rem;
         margin-bottom: 1rem;
