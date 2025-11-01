@@ -678,7 +678,7 @@ form textarea {
     border-bottom: 2px solid #f0f0f0;
 }
 
-.profile-info h2 {
+#app-content .profile-info h2 {
     text-align: left; /* Override default centered h2 */
     margin: 0;
     padding: 0;
@@ -912,7 +912,7 @@ form textarea {
 }
 
 .star-rating-input .stars span.filled {
-    color: #ffd7or;
+    color: #ffd700;
 }
 
 .delete-listing-btn {
