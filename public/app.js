@@ -158,6 +158,11 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
                 <span class="item-details-review-count">
                     (${sellerRating.count} ${sellerRating.count === 1 ? 'review' : 'reviews'})
                 </span>
+                ${sellerRating.count > 0 ? `
+                    <button type="button" id="view-seller-reviews-btn" class="view-reviews-btn">
+                        (View all reviews)
+                    </button>
+                ` : ''}
             </div>
         ` : `
             <div class="item-details-rating">
@@ -173,6 +178,14 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
             <button id="mark-as-sold-btn-main" class="mark-as-sold-btn">Mark as Sold</button>
         </div>
         ` : ''}
+        <div id="reviews-modal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <button type="button" class="modal-close-btn">&times;</button>
+                <h3>Reviews for ${listing.sellerEmail}</h3>
+                <div id="reviews-modal-list" class="reviews-modal-list">
+                    </div>
+            </div>
+        </div>
     </div>
     `;
 };
@@ -1011,6 +1024,59 @@ async function showItemDetails(auth, db, storage, listingId) {
                             deleteBtn.textContent = "Delete Listing";
                             deleteBtn.disabled = false;
                         }
+                    }
+                });
+            }
+
+            const viewReviewsBtn = document.getElementById('view-seller-reviews-btn');
+            const reviewsModal = document.getElementById('reviews-modal');
+
+            if (viewReviewsBtn && reviewsModal) {
+                const modalList = document.getElementById('reviews-modal-list');
+                const modalCloseBtn = reviewsModal.querySelector('.modal-close-btn');
+
+                // Function to open the modal and fetch reviews
+                const openModal = async () => {
+                    reviewsModal.style.display = 'flex';
+                    modalList.innerHTML = '<p>Loading reviews...</p>';
+
+                    try {
+                        const reviewSnapshot = await db.collection('reviews')
+                            .where('revieweeId', '==', listingData.sellerId)
+                            .orderBy('createdAt', 'desc')
+                            .get();
+
+                        if (reviewSnapshot.empty) {
+                            modalList.innerHTML = '<p>This seller has no reviews yet.</p>';
+                            return;
+                        }
+
+                        modalList.innerHTML = ''; // Clear loading
+                        reviewSnapshot.forEach(reviewDoc => {
+                            // We can re-use the existing dashboard review card template
+                            modalList.innerHTML += reviewCardHTML(reviewDoc.data());
+                        });
+
+                    } catch (err) {
+                        console.error("Error fetching seller reviews:", err);
+                        modalList.innerHTML = '<p class="error">Could not load reviews.</p>';
+                    }
+                };
+
+                // Function to close the modal
+                const closeModal = () => {
+                    reviewsModal.style.display = 'none';
+                    modalList.innerHTML = ''; // Clear content
+                };
+
+                // Add event listeners
+                viewReviewsBtn.addEventListener('click', openModal);
+                modalCloseBtn.addEventListener('click', closeModal);
+
+                // Close modal by clicking on the overlay (outside the content)
+                reviewsModal.addEventListener('click', (e) => {
+                    if (e.target === reviewsModal) {
+                        closeModal();
                     }
                 });
             }

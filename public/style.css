@@ -400,6 +400,22 @@ form textarea {
     margin-left: 8px;
     vertical-align: middle;
 }
+.view-reviews-btn {
+    background: none;
+    border: none;
+    color: #0050e6;
+    text-decoration: underline;
+    font-size: 0.9em;
+    cursor: pointer;
+    padding: 0;
+    margin-left: 5px;
+}
+
+.view-reviews-btn:hover {
+    color: #003087;
+    box-shadow: none;
+    transform: none;
+}
 
 /* --- Image Upload Preview with Drag & Drop --- */
 #image-preview-container {
@@ -561,6 +577,70 @@ form textarea {
     font-weight: 600;
     color: #28a745;
     margin-bottom: 1rem;
+}
+
+/* --- Reviews Modal --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-content h3 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+}
+
+.modal-close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-size: 2rem;
+    font-weight: bold;
+    color: #888;
+    background: none;
+    border: none;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+}
+
+.modal-close-btn:hover {
+    color: #333;
+    box-shadow: none;
+    transform: none;
+}
+
+.reviews-modal-list .review-card {
+    box-shadow: none;
+    border-bottom: 1px solid #f0f0f0;
+    border-radius: 0;
+    margin-bottom: 0;
+    padding: 1.5rem 0;
+}
+
+.reviews-modal-list .review-card:last-child {
+    border-bottom: none;
 }
 
 /* --- Status & Helper Classes --- */
@@ -1058,6 +1138,27 @@ body.dark-mode .drag-handle {
 
 .dark-mode .review-card-comment {
     color: #e0e0e0;
+}
+
+/* Dark mode for Reviews Modal */
+.dark-mode .view-reviews-btn {
+    color: #55c5ff;
+}
+
+.dark-mode .modal-content {
+    background: #2a2a2a;
+}
+
+.dark-mode .modal-close-btn {
+    color: #aaa;
+}
+
+.dark-mode .modal-close-btn:hover {
+    color: #e0e0e0;
+}
+
+.dark-mode .reviews-modal-list .review-card {
+    border-bottom-color: #3a3a3a;
 }
 
 /* --- Media Queries for Responsiveness --- */
