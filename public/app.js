@@ -150,6 +150,13 @@ const itemDetailsHTML = (listing, isOwner) => {
         ${listing.isTrade ? `<p class="trade-info">🔄 This seller is open to trades.</p>` : ''}
         <p class="description">${listing.description}</p>
         <p class="seller">Sold by: ${listing.sellerEmail}</p>
+
+        ${isOwner ? `
+        <div class="owner-actions">
+            <button id="edit-listing-btn-main" class="edit-listing-btn">Edit Listing</button>
+            <button id="delete-listing-btn-main" class="delete-listing-btn">Delete Listing</button>
+        </div>
+        ` : ''}
     </div>
     `;
 };
@@ -216,7 +223,8 @@ const myListingCardHTML = (listing, id) => {
         <div class="my-listing-card-actions">
             ${listing.status === 'active' ? 
             `<button class="mark-as-sold-btn" data-id="${id}">Mark as Sold</button>
-             <button class="edit-listing-btn" data-id="${id}">Edit</button>` 
+            <button class="edit-listing-btn" data-id="${id}">Edit</button>
+            <button class = "delete-listing-btn" data-id="${id}">Delete</button>` 
             : 
             `<span class="listing-sold-badge">SOLD</span>`
             }
@@ -687,6 +695,32 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
                 }
             });
         }
+        if (target.classList.contains('delete-listing-btn')) {
+            if (confirm('Are you sure you want to permanently delete this listing? This cannot be undone.')) {
+                target.textContent = "Deleting...";
+                target.disabled = true;
+
+                db.collection('listings').doc(listingId).delete()
+                    .then(() => {
+                        // Manually remove the card from the UI
+                        const card = target.closest('.listing-card');
+                        if (card) {
+                            card.remove();
+                        }
+                        alert('Listing deleted.');
+                        // Check if grid is now empty
+                        if (myGrid.children.length === 0) {
+                            myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error deleting listing:", err);
+                        alert('Failed to delete listing.');
+                        target.textContent = "Delete";
+                        target.disabled = false;
+                    });
+            }
+        }
     });
 
     db.collection('listings')
@@ -883,6 +917,40 @@ function showItemDetails(auth, db, storage, listingId) {
                     thumbnail.classList.add('active');
                 });
             });
+
+            const editBtn = document.getElementById('edit-listing-btn-main');
+            if (editBtn) {
+                editBtn.addEventListener('click', () => {
+                    // This logic is copied from the dashboard edit button
+                    sessionStorage.setItem('currentView', 'editListing');
+                    sessionStorage.setItem('currentItemId', listingId); 
+                    appContent.innerHTML = editListingHTML(listingData);
+                    addEditFormListener(auth, db, storage, listingId);
+                });
+            }
+
+            const deleteBtn = document.getElementById('delete-listing-btn-main');
+            if (deleteBtn) {
+                deleteBtn.addEventListener('click', async () => {
+                    if (confirm('Are you sure you want to permanently delete this listing? This cannot be undone.')) {
+                        try {
+                            // Disable button
+                            deleteBtn.textContent = "Deleting...";
+                            deleteBtn.disabled = true;
+                            // Delete from firestore
+                            await db.collection('listings').doc(listingId).delete();
+                            alert('Listing deleted successfully.');
+                            // Go back home
+                            document.getElementById('home-link').click(); 
+                        } catch (err) {
+                            console.error("Error deleting listing:", err);
+                            alert('Failed to delete listing.');
+                            deleteBtn.textContent = "Delete Listing";
+                            deleteBtn.disabled = false;
+                        }
+                    }
+                });
+            }
 
             document.getElementById('back-to-listings-btn').addEventListener('click', () => {
                 const previousView = sessionStorage.getItem('previousView');

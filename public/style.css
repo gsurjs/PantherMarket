@@ -796,6 +796,13 @@ form textarea {
     color: #ffd7or;
 }
 
+.delete-listing-btn {
+    background-color: #dc3545;
+}
+.delete-listing-btn:hover {
+    background-color: #c82333;
+}
+
 /* --- Upload Progress --- */
 /* 1. Shared styling for all progress bar containers */
 #upload-progress-container,
