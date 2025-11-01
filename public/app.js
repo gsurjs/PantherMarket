@@ -691,7 +691,10 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
         const listingId = target.dataset.id;
 
         if (target.classList.contains('mark-as-sold-btn')) {
-            const buyerEmail = prompt("Please enter the buyer's GSU email address:");
+            let buyerEmail = prompt("Please enter the buyer's GSU email address:");
+            if (buyerEmail) {
+                buyerEmail = buyerEmail.toLowerCase().trim();
+            }
             if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
                 const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
                 target.textContent = "Processing...";
@@ -793,7 +796,6 @@ async function renderMyOrders(auth, db, storage, containerElement) {
     try {
         const querySnapshot = await db.collection('orders')
             .where('buyerId', '==', user.uid)
-            .orderBy('createdAt', 'desc')
             .get();
 
         if (querySnapshot.empty) {
@@ -801,8 +803,21 @@ async function renderMyOrders(auth, db, storage, containerElement) {
             return;
         }
 
-        querySnapshot.forEach(doc => {
-            containerElement.innerHTML += orderCardHTML(doc.data(), doc.id);
+        // --- Client-side sorting ---
+        // 1. Map docs to an array
+        const orders = querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
+
+        // 2. Sort the array by createdAt date, newest first
+        orders.sort((a, b) => {
+            const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+            const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+            return timeB - timeA; // b - a for descending order
+        });
+        // --- End client-side sorting ---
+
+        // 3. Render the sorted orders from the array
+        orders.forEach(order => {
+            containerElement.innerHTML += orderCardHTML(order.data, order.id);
         });
 
     } catch (error) {
@@ -967,7 +982,12 @@ async function showItemDetails(auth, db, storage, listingId) {
             if (soldBtn) {
                 soldBtn.addEventListener('click', () => {
                     // This logic is copied from the dashboard
-                    const buyerEmail = prompt("Please enter the buyer's GSU email address:");
+                    let buyerEmail = prompt("Please enter the buyer's GSU email address:");
+
+                    if (buyerEmail) {
+                        buyerEmail = buyerEmail.toLowerCase().trim();
+                    }
+
                     if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
 
                         const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
