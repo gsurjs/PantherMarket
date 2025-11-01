@@ -158,11 +158,9 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
                 <span class="item-details-review-count">
                     (${sellerRating.count} ${sellerRating.count === 1 ? 'review' : 'reviews'})
                 </span>
-                ${sellerRating.count > 0 ? `
-                    <button type="button" id="view-seller-reviews-btn" class="view-reviews-btn">
-                        (View all reviews)
-                    </button>
-                ` : ''}
+                <button type="button" id="view-seller-reviews-btn" class="view-reviews-btn">
+                    (View all reviews)
+                </button>
             </div>
         ` : `
             <div class="item-details-rating">
