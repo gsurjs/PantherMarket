@@ -682,6 +682,8 @@ form textarea {
     text-align: left; /* Override default centered h2 */
     margin: 0;
     padding: 0;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 /* Override h2::after */
@@ -712,6 +714,8 @@ form textarea {
     display: flex;
     gap: 10px;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 .dashboard-tab {
@@ -1271,6 +1275,11 @@ body.dark-mode .drag-handle {
     
     .listing-card h3 {
         font-size: 1rem;
+    }
+
+    .dashboard-tab {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
     }
     
     /* Mobile - Image preview adjustments */
