@@ -115,6 +115,29 @@ header h3 {
     align-items: center;
 }
 
+/* --- Fix for Notification Bell on Mobile --- */
+#nav-links #notification-bell-btn {
+    padding: 0; /* Override the general nav button padding */
+    width: 2.5rem;  /* Match the theme toggle button */
+    height: 2.5rem; /* Match the theme toggle button */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%; /* Ensure it stays round */
+    font-size: 1.2rem;
+}
+
+/* --- Fix for Notification Dropdown on Mobile --- */
+#notification-dropdown {
+    position: fixed; /* Detach from button, anchor to viewport */
+    top: 75px; /* Adjust this value to sit just below your header */
+    left: 50%;
+    transform: translateX(-50%);
+    width: 95vw; /* Use most of the screen width */
+    max-width: 400px; /* But not *too* wide */
+    right: auto; /* Unset the original 'right: 0' */
+}
+
 #notification-bell-btn {
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
@@ -122,10 +145,13 @@ header h3 {
     color: white;
     width: 2.5rem;
     height: 2.5rem;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     padding: 0;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
 }
 
 #notification-bell-btn:hover {
