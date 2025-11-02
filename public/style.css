@@ -127,17 +127,6 @@ header h3 {
     font-size: 1.2rem;
 }
 
-/* --- Fix for Notification Dropdown on Mobile --- */
-#notification-dropdown {
-    position: fixed; /* Detach from button, anchor to viewport */
-    top: 75px; /* Adjust this value to sit just below your header */
-    left: 50%;
-    transform: translateX(-50%);
-    width: 95vw; /* Use most of the screen width */
-    max-width: 400px; /* But not *too* wide */
-    right: auto; /* Unset the original 'right: 0' */
-}
-
 #notification-bell-btn {
     background: rgba(255,255,255,0.1);
     border: 1px solid rgba(255,255,255,0.2);
@@ -173,15 +162,19 @@ header h3 {
 }
 
 #notification-dropdown {
-    position: fixed; 
-    top: 75px;      
-    width: 95vw;     
-    max-width: 400px; 
-    left: 0;
+    display: none; /* Hidden by default */
+    position: absolute;
+    top: calc(100% + 10px); /* Position below the bell */
     right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    transform: none;
+    width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
+    background: white;
+    color: #333;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    z-index: 101;
+    text-align: left;
 }
 
 #notification-dropdown-header {
@@ -1463,6 +1456,22 @@ body.dark-mode .drag-handle {
 
     .order-card-actions .leave-review-btn {
         width: 100%;
+    }
+
+    #notification-dropdown {
+        position: fixed;   /* Anchor to viewport */
+        top: 75px;         /* Sit just below header */
+        z-index: 101;      
+
+        /* --- New Centering Logic --- */
+        width: 95vw;
+        max-width: 400px;
+        left: 0;
+        right: 0;
+        margin-left: auto;
+        margin-right: auto;
+        transform: none;
+        right: 0; /* Override the 'right: auto' from the other rule */
     }
 }
 
