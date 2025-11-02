@@ -173,19 +173,15 @@ header h3 {
 }
 
 #notification-dropdown {
-    display: none; /* Hidden by default */
-    position: absolute;
-    top: calc(100% + 10px); /* Position below the bell */
+    position: fixed; 
+    top: 75px;      
+    width: 95vw;     
+    max-width: 400px; 
+    left: 0;
     right: 0;
-    width: 320px;
-    max-height: 400px;
-    overflow-y: auto;
-    background: white;
-    color: #333;
-    border-radius: 8px;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-    z-index: 101;
-    text-align: left;
+    margin-left: auto;
+    margin-right: auto;
+    transform: none;
 }
 
 #notification-dropdown-header {
