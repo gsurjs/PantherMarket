@@ -392,6 +392,14 @@ function setupAuthListener(auth, db, storage) {
                 navLinks.innerHTML = `
                     <a href="#" id="home-link">Home</a>
                     <a href="#" id="dashboard-link">Dashboard</a>
+                    <div id="notification-bell-container" class="nav-notification-bell">
+                        <button id="notification-bell-btn">🔔</button>
+                        <span id="notification-badge"></span>
+                        <div id="notification-dropdown">
+                            <div id="notification-dropdown-header">Notifications</div>
+                            <div id="notification-list-content"></div>
+                        </div>
+                    </div>
                     <button id="logout-button">Logout</button>
                 `;
 
@@ -465,6 +473,7 @@ function setupAuthListener(auth, db, storage) {
                 } else {
                     // Default to the home view
                     renderWelcomeView(currentUser, auth, db, storage);
+                    setupNotificationListener(auth, db);
                 }
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
@@ -770,8 +779,8 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
 
             // 2. Sort the array by createdAt date, newest first
             listings.sort((a, b) => {
-                const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
-                const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+                const timeA = a.data.createdAt ? a.createdAt.toMillis() : 0;
+                const timeB = b.data.createdAt ? b.createdAt.toMillis() : 0;
                 return timeB - timeA; // b - a for descending order
             });
             // --- End client-side sorting ---
@@ -1851,6 +1860,130 @@ function setupTheme() {
         
         // Apply the new theme to the page
         applyTheme(newTheme);
+    });
+}
+// --- NOTIFICATION SYSTEM ---
+function setupNotificationListener(auth, db) {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const bellContainer = document.getElementById('notification-bell-container');
+    const bellBtn = document.getElementById('notification-bell-btn');
+    const badge = document.getElementById('notification-badge');
+    const dropdown = document.getElementById('notification-dropdown');
+    const listContent = document.getElementById('notification-list-content');
+
+    if (!bellContainer) return; // In case user logs out while listener is setting up
+
+    // 1. Listen for UNREAD notifications to show/hide the badge
+    const unreadQuery = db.collection('notifications')
+        .where('userId', '==', user.uid)
+        .where('isRead', '==', false);
+
+    const unreadListener = unreadQuery.onSnapshot((snapshot) => {
+        if (snapshot.empty) {
+            badge.style.display = 'none';
+        } else {
+            badge.style.display = 'block';
+        }
+    }, (error) => {
+        console.error("Error listening for notifications:", error);
+    });
+
+    // 2. Function to load all recent notifications into the dropdown
+    let isLoading = false;
+    async function loadNotifications() {
+        if (isLoading) return;
+        isLoading = true;
+        listContent.innerHTML = '<p style="padding: 1rem; text-align: center;">Loading...</p>';
+
+        try {
+            const snapshot = await db.collection('notifications')
+                .where('userId', '==', user.uid)
+                .orderBy('createdAt', 'desc')
+                .limit(10)
+                .get();
+
+            if (snapshot.empty) {
+                listContent.innerHTML = '<p style="padding: 1rem; text-align: center;">No notifications yet.</p>';
+                return;
+            }
+
+            listContent.innerHTML = ''; // Clear loading
+            snapshot.forEach(doc => {
+                const notif = doc.data();
+                const item = document.createElement('div');
+                item.className = 'notification-item';
+                if (!notif.isRead) {
+                    item.classList.add('is-unread');
+                }
+                item.innerHTML = notif.message;
+                item.dataset.linkTo = notif.linkTo || 'none';
+                listContent.appendChild(item);
+            });
+
+        } catch (err) {
+            console.error("Error loading notifications:", err);
+            listContent.innerHTML = '<p class="error" style="padding: 1rem;">Could not load notifications.</p>';
+        } finally {
+            isLoading = false;
+        }
+    }
+
+    // 3. Function to mark all unread notifications as "read"
+    async function markNotificationsAsRead() {
+        const unreadSnapshot = await unreadQuery.get();
+        if (unreadSnapshot.empty) return;
+
+        const batch = db.batch();
+        unreadSnapshot.forEach(doc => {
+            batch.update(doc.ref, { isRead: true });
+        });
+        await batch.commit();
+        // The listener will automatically hide the badge
+    }
+
+    // 4. Handle clicks on the bell
+    bellBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isVisible = dropdown.style.display === 'block';
+        if (isVisible) {
+            dropdown.style.display = 'none';
+        } else {
+            dropdown.style.display = 'block';
+            loadNotifications();
+            markNotificationsAsRead();
+        }
+    });
+
+    // 5. Handle clicks on notification items (to navigate)
+    listContent.addEventListener('click', (e) => {
+        const item = e.target.closest('.notification-item');
+        if (!item) return;
+
+        const link = item.dataset.linkTo;
+        if (link.startsWith('dashboard-')) {
+            const tab = link.split('-')[1]; // e.g., "my-reviews"
+
+            // Click the dashboard link first
+            document.getElementById('dashboard-link').click();
+
+            // Wait a moment for the dashboard to render, then click the correct tab
+            setTimeout(() => {
+                const tabButton = document.getElementById(`tab-${tab}`);
+                if (tabButton) {
+                    tabButton.click();
+                }
+            }, 100); // 100ms delay
+        }
+        dropdown.style.display = 'none';
+    });
+
+    // 6. Close dropdown if clicking elsewhere
+    document.addEventListener('click', (e) => {
+        if (!bellContainer.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
     });
 }
 
