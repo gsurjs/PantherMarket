@@ -1316,6 +1316,20 @@ body.dark-mode .drag-handle {
     #app-content .profile-info h2 {
         font-size: 1.4rem;
     }
+
+    .order-card {
+        flex-wrap: wrap; 
+        padding: 1rem;
+    }
+
+    .order-card-actions {
+        flex-basis: 100%; 
+        margin-top: 1rem; 
+    }
+
+    .order-card-actions .leave-review-btn {
+        width: 100%;
+    }
 }
 
 @media (max-width: 400px) {
