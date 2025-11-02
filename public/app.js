@@ -1900,7 +1900,6 @@ function setupNotificationListener(auth, db) {
         try {
             const snapshot = await db.collection('notifications')
                 .where('userId', '==', user.uid)
-                .orderBy('createdAt', 'desc')
                 .limit(10)
                 .get();
 
@@ -1909,9 +1908,17 @@ function setupNotificationListener(auth, db) {
                 return;
             }
 
+            // --- Client-side sorting ---
+            const notifications = snapshot.docs.map(doc => doc.data());
+            notifications.sort((a, b) => {
+                const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
+                const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
+                return timeB - timeA; // b - a for descending order
+            });
+
             listContent.innerHTML = ''; // Clear loading
-            snapshot.forEach(doc => {
-                const notif = doc.data();
+            // Now loop over our sorted array
+            notifications.forEach(notif => {
                 const item = document.createElement('div');
                 item.className = 'notification-item';
                 if (!notif.isRead) {
