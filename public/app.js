@@ -473,8 +473,8 @@ function setupAuthListener(auth, db, storage) {
                 } else {
                     // Default to the home view
                     renderWelcomeView(currentUser, auth, db, storage);
-                    setupNotificationListener(auth, db);
                 }
+                setupNotificationListener(auth, db);
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
                 document.getElementById('app-content').style.display = 'block';
@@ -1970,14 +1970,17 @@ function setupNotificationListener(auth, db) {
 
         const link = item.dataset.linkTo;
         if (link.startsWith('dashboard-')) {
-            const tab = link.split('-')[1]; // e.g., "my-reviews"
+
+            // Get everything *after* "dashboard-"
+            const tabName = link.substring('dashboard-'.length); // This gets "my-reviews"
+            const tabButtonId = `tab-${tabName}`; // This becomes "tab-my-reviews"
 
             // Click the dashboard link first
             document.getElementById('dashboard-link').click();
 
             // Wait a moment for the dashboard to render, then click the correct tab
             setTimeout(() => {
-                const tabButton = document.getElementById(`tab-${tab}`);
+                const tabButton = document.getElementById(tabButtonId); // Use the correct ID
                 if (tabButton) {
                     tabButton.click();
                 }
