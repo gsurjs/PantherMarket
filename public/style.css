@@ -1460,7 +1460,7 @@ body.dark-mode .drag-handle {
 
     #notification-dropdown {
         position: fixed;   /* Anchor to viewport */
-        top: 100px;         /* Sit just below header */
+        top: 150px;         /* Sit just below header */
         z-index: 101;      
 
         /* --- New Centering Logic --- */
