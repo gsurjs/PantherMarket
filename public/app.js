@@ -855,7 +855,7 @@ async function renderMyReviews(auth, db, storage, containerElement) {
         const reviews = querySnapshot.docs.map(doc => doc.data());
         reviews.sort((a, b) => {
             const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
-            const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+            const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
             return timeB - timeA; // b - a for descending order
         });
         // --- End sorting ---
