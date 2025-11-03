@@ -481,7 +481,7 @@ function setupAuthListener(auth, db, storage) {
                     // Default to the home view
                     renderWelcomeView(currentUser, auth, db, storage);
                 }
-                setupNotificationListener(auth, db);
+                setupNotificationListener(auth, db, storage);
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
                 document.getElementById('app-content').style.display = 'block';
@@ -1878,7 +1878,7 @@ function setupTheme() {
     });
 }
 // --- NOTIFICATION SYSTEM ---
-function setupNotificationListener(auth, db) {
+function setupNotificationListener(auth, db, storage) {
     const user = auth.currentUser;
     if (!user) return;
 
