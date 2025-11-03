@@ -319,51 +319,6 @@ const reviewCardHTML = (review) => {
     `;
 };
 
-/**
- * Compresses an image file to reduce size before upload */
-async function compressImage(file, maxSizeKB = 800) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
-                
-                // Calculate new dimensions (max 1920px on longest side)
-                const maxDimension = 1920;
-                if (width > height && width > maxDimension) {
-                    height *= maxDimension / width;
-                    width = maxDimension;
-                } else if (height > maxDimension) {
-                    width *= maxDimension / height;
-                    height = maxDimension;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                // Convert to blob with quality adjustment (85% quality JPEG)
-                canvas.toBlob((blob) => {
-                    if (blob) {
-                        console.log(`Compressed image: ${file.size} bytes -> ${blob.size} bytes`);
-                        resolve(blob);
-                    } else {
-                        reject(new Error('Failed to compress image'));
-                    }
-                }, 'image/jpeg', 0.85);
-            };
-            img.onerror = () => reject(new Error('Failed to load image'));
-        };
-        reader.onerror = () => reject(new Error('Failed to read file'));
-    });
-}
-
 function renderWelcomeView(user, auth, db, storage) {
     appContent.innerHTML = welcomeHTML(user);
     document.getElementById('create-listing-btn').addEventListener('click', () => {
@@ -388,7 +343,7 @@ async function initializeApp() {
 
         const appCheck = firebase.appCheck();
         appCheck.activate(
-            firebaseConfig.recaptchaKeyV3,
+            config.recaptchaKeyV3, // <-- Use the NEW v3 key
             true
         );
 
@@ -1266,42 +1221,33 @@ function addListingFormListener(auth, db, storage) {
     let touchOffset = { x: 0, y: 0 };
 
     async function validateImageSafety(file) {
-        return new Promise(async (resolve) => {
-            try {
-                // First, compress the image
-                const compressedBlob = await compressImage(file);
-                
-                // Convert compressed blob to base64
-                const reader = new FileReader();
-                reader.readAsDataURL(compressedBlob);
-                reader.onload = async () => {
-                    try {
-                        const base64Image = reader.result.split(',')[1];
-                        const functions = firebase.functions();
-                        const checkSafety = functions.httpsCallable('checkImageSafety');
-                        
-                        await checkSafety({ image: base64Image });
-                        
-                        // If it succeeds, the image is safe
-                        // Return the ORIGINAL file (not compressed) for actual upload
-                        resolve({ safe: true, file: file });
-                        
-                    } catch (error) {
-                        console.error("Image validation error:", error);
-                        let reason = "Analysis failed.";
-                        if (error.code === 'permission-denied') {
-                            reason = error.message;
-                        }
-                        resolve({ safe: false, file: file, reason: reason });
+        return new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = async () => {
+                try {
+                    const base64Image = reader.result.split(',')[1];
+                    const functions = firebase.functions();
+
+                    const checkSafety = functions.httpsCallable('checkImageSafety');
+                                        
+                    await checkSafety({ image: base64Image });
+
+                    // If it succeeds, the image is safe.
+                    resolve({ safe: true, file: file });
+
+                } catch (error) {
+                    console.error("Image validation error:", error);
+                    let reason = "Analysis failed.";
+                    if (error.code === 'permission-denied') {
+                        reason = error.message; // Use the specific error from the function
                     }
-                };
-                reader.onerror = () => {
-                    resolve({ safe: false, file: file, reason: "Could not read file." });
-                };
-            } catch (compressionError) {
-                console.error("Image compression error:", compressionError);
-                resolve({ safe: false, file: file, reason: "Could not process image." });
-            }
+                    resolve({ safe: false, file: file, reason: reason });
+                }
+            };
+            reader.onerror = () => {
+                resolve({ safe: false, file: file, reason: "Could not read file." });
+            };
         });
     }
     
@@ -1555,43 +1501,68 @@ function addListingFormListener(auth, db, storage) {
 
         if (newFiles.length === 0) return;
 
-        // --- NEW SIMPLIFIED LOGIC ---
-        // We are skipping the call to validateImageSafety() completely.
+        // --- Show and configure the analysis progress bar ---
+        analysisProgressContainer.style.display = 'block';
+        analysisProgressBar.value = 0;
+        analysisProgressBar.max = newFiles.length;
+        analysisProgressLabel.textContent = `Analyzing image 1 of ${newFiles.length}...`;
         
         submitBtn.disabled = true;
         imageInput.disabled = true;
-
+        
+        let completedFiles = 0;
         let errorMessages = [];
+        let allFilesSafe = true;
 
-        newFiles.forEach(file => {
-            if (filesToUpload.length < 4) {
-                filesToUpload.push(file);
-            } else {
-                errorMessages.push(`Max 4 images. '${file.name}' was not added.`);
-            }
+        // We wrap the safety check to report progress as each promise resolves
+        const validationPromises = newFiles.map((file, index) => {
+            return validateImageSafety(file).then(result => {
+                // This 'then' block runs as soon as *one* check finishes
+                completedFiles++;
+                analysisProgressBar.value = completedFiles;
+                analysisProgressLabel.textContent = `Analyzed ${completedFiles} of ${newFiles.length}...`;
+                
+                // Now, handle the result of this one file
+                if (result.safe) {
+                    if (filesToUpload.length < 4) {
+                        filesToUpload.push(result.file);
+                    } else {
+                        errorMessages.push(`Max 4 images. '${result.file.name}' was not added.`);
+                        allFilesSafe = false;
+                    }
+                } else {
+                    errorMessages.push(`<b>${result.file.name}</b> rejected: ${result.reason}`);
+                    allFilesSafe = false;
+                }
+                
+                return result; // Pass the result along
+            });
         });
 
+        // Wait for all the wrapped promises to finish
+        const results = await Promise.all(validationPromises);
+
+        // --- Update UI after all analysis is complete ---
+        analysisProgressContainer.style.display = 'none'; // Hide progress bar
+        
         if (errorMessages.length > 0) {
             formError.innerHTML = errorMessages.join('<br>');
         }
 
-        renderPreviews(); // Render all the files that were added
+        renderPreviews(); // Render only the safe files that were added
 
         // Update status message
-        if (newFiles.length > 0) {
-            aiStatus.textContent = `✅ ${newFiles.length} image(s) added.`;
+        if (allFilesSafe && newFiles.length > 0) {
+            aiStatus.textContent = "✅ Images approved.";
             aiStatus.style.color = 'green';
+        } else if (!allFilesSafe) {
+            aiStatus.textContent = "❌ Some images were rejected.";
+            aiStatus.style.color = 'red';
         }
 
         analyzeBtn.disabled = filesToUpload.length === 0;
         submitBtn.disabled = false;
         imageInput.disabled = false;
-        
-        // --- END OF NEW LOGIC ---
-        
-        // We no longer show the analysis progress bar here,
-        // so we can remove all that code.
-        analysisProgressContainer.style.display = 'none'; 
     });
 
     
