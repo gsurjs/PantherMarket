@@ -340,6 +340,13 @@ async function initializeApp() {
 
         // Initialize Firebase with the fetched config
         firebase.initializeApp(firebaseConfig);
+
+        const appCheck = firebase.appCheck();
+        appCheck.activate(
+            config.recaptchaKeyV3,
+            true
+        );
+
         const auth = firebase.auth();
         const db = firebase.firestore();
         const storage = firebase.storage();
