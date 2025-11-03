@@ -623,7 +623,7 @@ function loadAllListings(auth, db, storage, searchTerm = '') {
 
 
 // --- FUNCTION TO RENDER USER DASHBOARD ---
-async function renderUserDashboard(auth, db, storage) {
+async function renderUserDashboard(auth, db, storage, defaultTab = 'my-listings') {
     const user = auth.currentUser;
     if (!user) return;
 
@@ -686,8 +686,16 @@ async function renderUserDashboard(auth, db, storage) {
         });
     });
 
-    // --- 3. Load "My Listings" Tab by default ---
-    renderMyListingsTab(auth, db, storage, dashboardContent);
+    // --- 3. Load the correct tab ---
+    // Find the button corresponding to the defaultTab (e.g., 'tab-my-reviews')
+    const tabToLoad = document.getElementById(`tab-${defaultTab}`);
+    
+    if (tabToLoad) {
+        tabToLoad.click(); // This will click the correct tab, which will load its content.
+    } else {
+        // Fallback just in case
+        document.getElementById('tab-my-listings').click();
+    }
 }
 
 // --- NEW FUNCTION: Renders the "My Listings" Tab ---
@@ -1977,21 +1985,12 @@ function setupNotificationListener(auth, db) {
 
         const link = item.dataset.linkTo;
         if (link.startsWith('dashboard-')) {
-
-            // Get everything *after* "dashboard-"
-            const tabName = link.substring('dashboard-'.length); // This gets "my-reviews"
-            const tabButtonId = `tab-${tabName}`; // This becomes "tab-my-reviews"
-
-            // Click the dashboard link first
-            document.getElementById('dashboard-link').click();
-
-            // Wait a moment for the dashboard to render, then click the correct tab
-            setTimeout(() => {
-                const tabButton = document.getElementById(tabButtonId); // Use the correct ID
-                if (tabButton) {
-                    tabButton.click();
-                }
-            }, 100); // 100ms delay
+            // Get the tab name, e.g., "my-reviews"
+            const tabName = link.substring('dashboard-'.length); 
+            
+            // Directly call renderUserDashboard and pass the tab name.
+            // This avoids the race condition completely.
+            renderUserDashboard(auth, db, storage, tabName);
         }
         dropdown.style.display = 'none';
     });
