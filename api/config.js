@@ -7,5 +7,6 @@ export default function handler(req, res) {
     messagingSenderId: process.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
     appId: process.env.VITE_FIREBASE_APP_ID,
     recaptchaSiteKey: process.env.VITE_RECAPTCHA_SITE_KEY,
+    recaptchaKeyV3: process.env.VITE_RECAPTCHA_V3_SITE_KEY,
   });
 }
