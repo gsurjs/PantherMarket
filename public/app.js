@@ -1105,14 +1105,14 @@ async function showItemDetails(auth, db, storage, listingId) {
                         const reviews = reviewSnapshot.docs.map(doc => doc.data());
                         reviews.sort((a, b) => {
                             const timeA = a.createdAt ? a.createdAt.toMillis() : 0;
-                            const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+                            const timeB = b.createdAt ? b.createdAt.toMillis() : 0;
                             return timeB - timeA; // b - a for descending order
                         });
 
                         modalList.innerHTML = ''; // Clear loading
-                        reviewSnapshot.forEach(reviewDoc => {
-                            // We can re-use the existing dashboard review card template
-                            modalList.innerHTML += reviewCardHTML(reviewDoc.data());
+                        reviews.forEach(reviewData => { 
+                            // re-use the existing dashboard review card template
+                            modalList.innerHTML += reviewCardHTML(reviewData);
                         });
 
                     } catch (err) {
