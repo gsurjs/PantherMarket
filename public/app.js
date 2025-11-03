@@ -319,6 +319,51 @@ const reviewCardHTML = (review) => {
     `;
 };
 
+/**
+ * Compresses an image file to reduce size before upload */
+async function compressImage(file, maxSizeKB = 800) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                // Calculate new dimensions (max 1920px on longest side)
+                const maxDimension = 1920;
+                if (width > height && width > maxDimension) {
+                    height *= maxDimension / width;
+                    width = maxDimension;
+                } else if (height > maxDimension) {
+                    width *= maxDimension / height;
+                    height = maxDimension;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // Convert to blob with quality adjustment (85% quality JPEG)
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        console.log(`Compressed image: ${file.size} bytes -> ${blob.size} bytes`);
+                        resolve(blob);
+                    } else {
+                        reject(new Error('Failed to compress image'));
+                    }
+                }, 'image/jpeg', 0.85);
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+        };
+        reader.onerror = () => reject(new Error('Failed to read file'));
+    });
+}
+
 function renderWelcomeView(user, auth, db, storage) {
     appContent.innerHTML = welcomeHTML(user);
     document.getElementById('create-listing-btn').addEventListener('click', () => {
@@ -1221,33 +1266,42 @@ function addListingFormListener(auth, db, storage) {
     let touchOffset = { x: 0, y: 0 };
 
     async function validateImageSafety(file) {
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async () => {
-                try {
-                    const base64Image = reader.result.split(',')[1];
-                    const functions = firebase.functions();
-
-                    const checkSafety = functions.httpsCallable('checkImageSafety');
-                                        
-                    await checkSafety({ image: base64Image });
-
-                    // If it succeeds, the image is safe.
-                    resolve({ safe: true, file: file });
-
-                } catch (error) {
-                    console.error("Image validation error:", error);
-                    let reason = "Analysis failed.";
-                    if (error.code === 'permission-denied') {
-                        reason = error.message; // Use the specific error from the function
+        return new Promise(async (resolve) => {
+            try {
+                // First, compress the image
+                const compressedBlob = await compressImage(file);
+                
+                // Convert compressed blob to base64
+                const reader = new FileReader();
+                reader.readAsDataURL(compressedBlob);
+                reader.onload = async () => {
+                    try {
+                        const base64Image = reader.result.split(',')[1];
+                        const functions = firebase.functions();
+                        const checkSafety = functions.httpsCallable('checkImageSafety');
+                        
+                        await checkSafety({ image: base64Image });
+                        
+                        // If it succeeds, the image is safe
+                        // Return the ORIGINAL file (not compressed) for actual upload
+                        resolve({ safe: true, file: file });
+                        
+                    } catch (error) {
+                        console.error("Image validation error:", error);
+                        let reason = "Analysis failed.";
+                        if (error.code === 'permission-denied') {
+                            reason = error.message;
+                        }
+                        resolve({ safe: false, file: file, reason: reason });
                     }
-                    resolve({ safe: false, file: file, reason: reason });
-                }
-            };
-            reader.onerror = () => {
-                resolve({ safe: false, file: file, reason: "Could not read file." });
-            };
+                };
+                reader.onerror = () => {
+                    resolve({ safe: false, file: file, reason: "Could not read file." });
+                };
+            } catch (compressionError) {
+                console.error("Image compression error:", compressionError);
+                resolve({ safe: false, file: file, reason: "Could not process image." });
+            }
         });
     }
     
