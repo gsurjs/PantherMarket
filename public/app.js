@@ -343,7 +343,7 @@ async function initializeApp() {
 
         const appCheck = firebase.appCheck();
         appCheck.activate(
-            config.recaptchaKeyV3, // <-- Use the NEW v3 key
+            firebaseConfig.recaptchaKeyV3, // <-- Use the NEW v3 key
             true
         );
 
