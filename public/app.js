@@ -1555,68 +1555,43 @@ function addListingFormListener(auth, db, storage) {
 
         if (newFiles.length === 0) return;
 
-        // --- Show and configure the analysis progress bar ---
-        analysisProgressContainer.style.display = 'block';
-        analysisProgressBar.value = 0;
-        analysisProgressBar.max = newFiles.length;
-        analysisProgressLabel.textContent = `Analyzing image 1 of ${newFiles.length}...`;
+        // --- NEW SIMPLIFIED LOGIC ---
+        // We are skipping the call to validateImageSafety() completely.
         
         submitBtn.disabled = true;
         imageInput.disabled = true;
-        
-        let completedFiles = 0;
-        let errorMessages = [];
-        let allFilesSafe = true;
 
-        // We wrap the safety check to report progress as each promise resolves
-        const validationPromises = newFiles.map((file, index) => {
-            return validateImageSafety(file).then(result => {
-                // This 'then' block runs as soon as *one* check finishes
-                completedFiles++;
-                analysisProgressBar.value = completedFiles;
-                analysisProgressLabel.textContent = `Analyzed ${completedFiles} of ${newFiles.length}...`;
-                
-                // Now, handle the result of this one file
-                if (result.safe) {
-                    if (filesToUpload.length < 4) {
-                        filesToUpload.push(result.file);
-                    } else {
-                        errorMessages.push(`Max 4 images. '${result.file.name}' was not added.`);
-                        allFilesSafe = false;
-                    }
-                } else {
-                    errorMessages.push(`<b>${result.file.name}</b> rejected: ${result.reason}`);
-                    allFilesSafe = false;
-                }
-                
-                return result; // Pass the result along
-            });
+        let errorMessages = [];
+
+        newFiles.forEach(file => {
+            if (filesToUpload.length < 4) {
+                filesToUpload.push(file);
+            } else {
+                errorMessages.push(`Max 4 images. '${file.name}' was not added.`);
+            }
         });
 
-        // Wait for all the wrapped promises to finish
-        const results = await Promise.all(validationPromises);
-
-        // --- Update UI after all analysis is complete ---
-        analysisProgressContainer.style.display = 'none'; // Hide progress bar
-        
         if (errorMessages.length > 0) {
             formError.innerHTML = errorMessages.join('<br>');
         }
 
-        renderPreviews(); // Render only the safe files that were added
+        renderPreviews(); // Render all the files that were added
 
         // Update status message
-        if (allFilesSafe && newFiles.length > 0) {
-            aiStatus.textContent = "✅ Images approved.";
+        if (newFiles.length > 0) {
+            aiStatus.textContent = `✅ ${newFiles.length} image(s) added.`;
             aiStatus.style.color = 'green';
-        } else if (!allFilesSafe) {
-            aiStatus.textContent = "❌ Some images were rejected.";
-            aiStatus.style.color = 'red';
         }
 
         analyzeBtn.disabled = filesToUpload.length === 0;
         submitBtn.disabled = false;
         imageInput.disabled = false;
+        
+        // --- END OF NEW LOGIC ---
+        
+        // We no longer show the analysis progress bar here,
+        // so we can remove all that code.
+        analysisProgressContainer.style.display = 'none'; 
     });
 
     
