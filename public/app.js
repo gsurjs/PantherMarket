@@ -900,51 +900,75 @@ async function renderMyReviews(auth, db, storage, containerElement) {
 // --Renders My Payments Tab--
 
 async function renderMyPaymentsTab(auth, db, containerElement) {
-    const user = auth.currentUser;
-    containerElement.innerHTML = '<h2>Payments Dashboard</h2>';
+    containerElement.innerHTML = `
+        <h2>Payments Dashboard</h2>
+        <p id="payment-status-loading">Loading account status...</p>
+        <div id="payment-content"></div>
+    `;
 
+    const statusEl = document.getElementById('payment-status-loading');
+    const contentEl = document.getElementById('payment-content');
+
+    // This function calls our new "getStripeOnboardingLink" function
+    // and redirects the user.
+    const handleConnectClick = async (btn) => {
+        btn.textContent = "Connecting...";
+        btn.disabled = true;
+
+        try {
+            const getLinkFunc = firebase.functions().httpsCallable('getStripeOnboardingLink');
+            const result = await getLinkFunc();
+            
+            // Redirect user to Stripe's onboarding page
+            window.location.href = result.data.url;
+
+        } catch (error) {
+            console.error("Error getting Stripe link:", error);
+            alert(`Error: ${error.message}`);
+            btn.textContent = "Connect Stripe to Get Paid";
+            btn.disabled = false;
+        }
+    };
+
+    // 1. Call our new status-checking function
     try {
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
+        const checkStatusFunc = firebase.functions().httpsCallable('checkStripeAccountStatus');
+        const result = await checkStatusFunc();
+        const status = result.data.status;
         
-        if (userData && userData.stripeAccountId) {
-            // User is already connected
-            containerElement.innerHTML += `
+        statusEl.style.display = 'none'; // Hide "Loading..."
+
+        if (status === 'connected') {
+            // STATE 1: Fully connected
+            contentEl.innerHTML = `
                 <p class="success-message">✅ Your account is connected to Stripe!</p>
                 <p>You can now receive payments for your listings.</p>
-                `;
-
+            `;
+        } else if (status === 'incomplete') {
+            // STATE 2: Has account, but not finished
+            contentEl.innerHTML = `
+                <p class="error">Your Stripe account setup is not complete.</p>
+                <p>Please complete the onboarding process to start receiving payments.</p>
+                <button id="finish-stripe-btn" class="submit-button">Finish Stripe Setup</button>
+            `;
+            document.getElementById('finish-stripe-btn').addEventListener('click', (e) => {
+                handleConnectClick(e.target);
+            });
         } else {
-            // User is NOT connected
-            containerElement.innerHTML += `
+            // STATE 3: No account at all
+            contentEl.innerHTML = `
                 <p>Connect your account to Stripe to start receiving payments for your sales.</p>
                 <button id="connect-stripe-btn" class="submit-button">Connect Stripe to Get Paid</button>
             `;
-            
-            // Add listener for the new button
-            document.getElementById('connect-stripe-btn').addEventListener('click', async () => {
-                const btn = document.getElementById('connect-stripe-btn');
-                btn.textContent = "Creating account...";
-                btn.disabled = true;
-
-                try {
-                    const createAccountFunc = firebase.functions().httpsCallable('createStripeConnectAccount');
-                    const result = await createAccountFunc();
-                    
-                    // Redirect user to Stripe's onboarding page
-                    window.location.href = result.data.url;
-
-                } catch (error) {
-                    console.error("Error creating Stripe link:", error);
-                    alert(`Error: ${error.message}`);
-                    btn.textContent = "Connect Stripe to Get Paid";
-                    btn.disabled = false;
-                }
+            document.getElementById('connect-stripe-btn').addEventListener('click', (e) => {
+                handleConnectClick(e.target);
             });
         }
+
     } catch (error) {
-        console.error("Error fetching user payment data:", error);
-        containerElement.innerHTML += '<p class="error">Could not load payment information.</p>';
+        console.error("Error checking Stripe status:", error);
+        statusEl.style.display = 'none';
+        contentEl.innerHTML = '<p class="error">Could not load payment information. Please try again.</p>';
     }
 }
 
