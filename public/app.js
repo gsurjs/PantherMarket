@@ -458,8 +458,21 @@ function setupAuthListener(auth, db, storage) {
 
                 // 3. Handle the redirect from Stripe
                 if (stripeAction === 'stripe_return' && stripeTab === 'payments') {
-                    // User just finished Stripe setup. Show them the dashboard on the payments tab.
+                    // User just finished Stripe setup.
                     renderUserDashboard(auth, db, storage, 'payments');
+                
+                } else if (stripeAction === 'stripe_success') {
+                    // User just successfully paid for an item.
+                    // The webhook is marking it as sold in the background.
+                    // Show them their "My Orders" page.
+                    renderUserDashboard(auth, db, storage, 'my-orders');
+                    // also show a one-time success alert:
+                    alert("Payment successful! Your order is being processed.");
+
+                } else if (stripeAction === 'stripe_cancel') {
+                    // User canceled the payment. Show them the homepage.
+                    renderWelcomeView(currentUser, auth, db, storage);
+                    alert("Payment was canceled. You have not been charged.");
                 
                 } else {
                     // 4. If no redirect, use the normal sessionStorage logic
