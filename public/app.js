@@ -3,6 +3,9 @@ const navLinks = document.getElementById('nav-links');
 const appContent = document.getElementById('app-content');
 const listingsGrid = document.getElementById('listings-grid');
 const listingsSection = document.getElementById('listings-section');
+//--STRIPE INIT-- public key
+const stripe = Stripe('pk_test_51SPblu2OqbuQAGApTQPlL3E3Fd6EPtlRSGDEKLB7XvGvG99wfirECHxW1VrF8WwBy4ql9sfNvKN81zpAbNLeY1lw007msYTFRh');
+
 
 // --- HTML TEMPLATES ---
 const mainListingsSectionHTML = `
@@ -175,7 +178,12 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
             <button id="delete-listing-btn-main" class="delete-listing-btn">Delete Listing</button>
             <button id="mark-as-sold-btn-main" class="mark-as-sold-btn">Mark as Sold</button>
         </div>
-        ` : ''}
+        ` : `
+        <div class="buyer-actions">
+            <button id="pay-with-stripe-btn" class="submit-button">Pay $${listing.price} with Stripe</button>
+            <p class="small-text">Note: You must still meet the seller to pick up your item.</p>
+        </div>
+        `}
         <div id="reviews-modal" class="modal-overlay" style="display: none;">
             <div class="modal-content">
                 <button type="button" class="modal-close-btn">&times;</button>
@@ -229,6 +237,7 @@ const userDashboardHTML = `
         <button id="tab-my-listings" class="dashboard-tab active">My Listings</button>
         <button id="tab-my-orders" class="dashboard-tab">My Orders</button>
         <button id="tab-my-reviews" class="dashboard-tab">My Reviews</button>
+        <button id="tab-payments" class="dashboard-tab">Payments</button>
     </div>
 
     <div class="dashboard-content">
@@ -682,6 +691,8 @@ async function renderUserDashboard(auth, db, storage, defaultTab = 'my-listings'
                 renderMyOrders(auth, db, storage, dashboardContent);
             } else if (tab.id === 'tab-my-reviews') {
                 renderMyReviews(auth, db, storage, dashboardContent);
+            } else if (tab.id === 'tab-payments') { 
+                renderMyPaymentsTab(auth, db, dashboardContent);
             }
         });
     });
@@ -886,6 +897,57 @@ async function renderMyReviews(auth, db, storage, containerElement) {
     }
 }
 
+// --Renders My Payments Tab--
+
+async function renderMyPaymentsTab(auth, db, containerElement) {
+    const user = auth.currentUser;
+    containerElement.innerHTML = '<h2>Payments Dashboard</h2>';
+
+    try {
+        const userDoc = await db.collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+        
+        if (userData && userData.stripeAccountId) {
+            // User is already connected
+            containerElement.innerHTML += `
+                <p class="success-message">✅ Your account is connected to Stripe!</p>
+                <p>You can now receive payments for your listings.</p>
+                `;
+
+        } else {
+            // User is NOT connected
+            containerElement.innerHTML += `
+                <p>Connect your account to Stripe to start receiving payments for your sales.</p>
+                <button id="connect-stripe-btn" class="submit-button">Connect Stripe to Get Paid</button>
+            `;
+            
+            // Add listener for the new button
+            document.getElementById('connect-stripe-btn').addEventListener('click', async () => {
+                const btn = document.getElementById('connect-stripe-btn');
+                btn.textContent = "Creating account...";
+                btn.disabled = true;
+
+                try {
+                    const createAccountFunc = firebase.functions().httpsCallable('createStripeConnectAccount');
+                    const result = await createAccountFunc();
+                    
+                    // Redirect user to Stripe's onboarding page
+                    window.location.href = result.data.url;
+
+                } catch (error) {
+                    console.error("Error creating Stripe link:", error);
+                    alert(`Error: ${error.message}`);
+                    btn.textContent = "Connect Stripe to Get Paid";
+                    btn.disabled = false;
+                }
+            });
+        }
+    } catch (error) {
+        console.error("Error fetching user payment data:", error);
+        containerElement.innerHTML += '<p class="error">Could not load payment information.</p>';
+    }
+}
+
 // --- Renders the "Create Review" Form ---
 async function renderCreateReviewForm(auth, db, storage, orderId) {
     const user = auth.currentUser;
@@ -1079,6 +1141,32 @@ async function showItemDetails(auth, db, storage, listingId) {
                     }
                 });
             }
+
+            const payBtn = document.getElementById('pay-with-stripe-btn');
+            if (payBtn) {
+                payBtn.addEventListener('click', async () => {
+                    payBtn.textContent = "Creating payment session...";
+                    payBtn.disabled = true;
+
+                    try {
+                        const createSessionFunc = firebase.functions().httpsCallable('createStripeCheckoutSession');
+                        const result = await createSessionFunc({ listingId: listingId });
+                        
+                        // This 'stripe' variable is the one you initialized at the After
+                        // top of app.js with your PUBLISHABLE key.
+                        await stripe.redirectToCheckout({
+                            sessionId: result.data.sessionId
+                        });
+
+                    } catch (error) {
+                        console.error("Error redirecting to checkout:", error);
+                        alert(`Error: ${error.message}`);
+                        payBtn.textContent = `Pay $${listingData.price} with Stripe`;
+                        payBtn.disabled = false;
+                    }
+                });
+            }
+
 
             const viewReviewsBtn = document.getElementById('view-seller-reviews-btn');
             const reviewsModal = document.getElementById('reviews-modal');
