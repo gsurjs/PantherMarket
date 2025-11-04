@@ -448,8 +448,15 @@ function setupAuthListener(auth, db, storage) {
 
                 // --- ROUTING LOGIC: RESTORE VIEW ON PAGE LOAD/REFRESH ---
                 const savedView = sessionStorage.getItem('currentView');
-                
-                if (savedView === 'dashboard') {
+                const path = window.location.pathname;
+
+                window.history.replaceState(null, '', '/');
+
+                if (path.startsWith('/dashboard')) {
+                    // We'll send them to the dashboard and open the 'payments' tab
+                    renderUserDashboard(auth, db, storage, 'payments'); 
+                }
+                else if (savedView === 'dashboard') {
                     renderUserDashboard(auth, db, storage);
 
                 } else if (savedView === 'itemDetails') {
