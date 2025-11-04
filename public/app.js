@@ -698,6 +698,7 @@ async function renderUserDashboard(auth, db, storage, defaultTab = 'my-listings'
     }
 
     // --- 2. Add Listeners for Dashboard UI ---
+    let activeDashboardListener = null;
     
     // Handle clicks on the content area (for "Leave Review")
     dashboardContent.addEventListener('click', (e) => {
@@ -715,10 +716,16 @@ async function renderUserDashboard(auth, db, storage, defaultTab = 'my-listings'
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
 
+            if (activeDashboardListener) {
+                activeDashboardListener(); // Call the unsubscribe function
+                activeDashboardListener = null;
+            }
+
             if (tab.id === 'tab-my-listings') {
-                renderMyListingsTab(auth, db, storage, dashboardContent); // <-- UPDATED
+                renderMyListingsTab(auth, db, storage, dashboardContent);
             } else if (tab.id === 'tab-my-orders') {
-                renderMyOrders(auth, db, storage, dashboardContent);
+                // --- NEW: Store the returned unsubscribe function ---
+                activeDashboardListener = renderMyOrders(auth, db, storage, dashboardContent);
             } else if (tab.id === 'tab-my-reviews') {
                 renderMyReviews(auth, db, storage, dashboardContent);
             } else if (tab.id === 'tab-payments') { 
@@ -855,41 +862,45 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
 }
 
 // --- Renders the "My Orders" Tab ---
-async function renderMyOrders(auth, db, storage, containerElement) {
+function renderMyOrders(auth, db, storage, containerElement) {
     const user = auth.currentUser;
     containerElement.innerHTML = '<h2>My Orders</h2>'; // Set title
+    
+    const ordersListContainer = document.createElement('div');
+    containerElement.appendChild(ordersListContainer);
+    ordersListContainer.innerHTML = '<p>Loading your orders...</p>';
 
-    try {
-        const querySnapshot = await db.collection('orders')
-            .where('buyerId', '==', user.uid)
-            .get();
+    const query = db.collection('orders')
+        .where('buyerId', '==', user.uid);
+
+    // 4. Store the unsubscribe function that onSnapshot returns
+    const unsubscribe = query.onSnapshot((querySnapshot) => {
 
         if (querySnapshot.empty) {
-            containerElement.innerHTML += '<p>You have not purchased any items yet.</p>';
+            ordersListContainer.innerHTML = '<p>You have not purchased any items yet.</p>';
             return;
         }
-
-        // --- Client-side sorting ---
-        // 1. Map docs to an array
+        
         const orders = querySnapshot.docs.map(doc => ({ id: doc.id, data: doc.data() }));
 
-        // 2. Sort the array by createdAt date, newest first
         orders.sort((a, b) => {
             const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
             const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
-            return timeB - timeA; // b - a for descending order
+            return timeB - timeA; 
         });
-        // --- End client-side sorting ---
-
-        // 3. Render the sorted orders from the array
+        
+        ordersListContainer.innerHTML = ''; 
         orders.forEach(order => {
-            containerElement.innerHTML += orderCardHTML(order.data, order.id);
+            ordersListContainer.innerHTML += orderCardHTML(order.data, order.id);
         });
 
-    } catch (error) {
+    }, (error) => {
         console.error("Error fetching orders:", error);
-        containerElement.innerHTML += '<p class="error">Could not load your orders.</p>';
-    }
+        ordersListContainer.innerHTML = '<p class="error">Could not load your orders.</p>';
+    });
+
+    // 5. Return the function so the dashboard can manage it
+    return unsubscribe;
 }
 
 // --- Renders the "My Reviews" Tab ---
