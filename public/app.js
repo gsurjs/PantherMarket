@@ -446,57 +446,61 @@ function setupAuthListener(auth, db, storage) {
                     renderUserDashboard(auth, db, storage);
                 });
 
-                // --- ROUTING LOGIC: RESTORE VIEW ON PAGE LOAD/REFRESH ---
-                const savedView = sessionStorage.getItem('currentView');
-                const path = window.location.pathname;
+                // 1. Check for URL parameters from Stripe or other redirects
+                const urlParams = new URLSearchParams(window.location.search);
+                const stripeAction = urlParams.get('action');
+                const stripeTab = urlParams.get('tab');
 
-                window.history.replaceState(null, '', '/');
-
-                if (path.startsWith('/dashboard')) {
-                    // We'll send them to the dashboard and open the 'payments' tab
-                    renderUserDashboard(auth, db, storage, 'payments'); 
+                // 2. Clean the URL bar so we don't get in a loop on refresh
+                if (stripeAction) {
+                    window.history.replaceState(null, '', '/');
                 }
-                else if (savedView === 'dashboard') {
-                    renderUserDashboard(auth, db, storage);
 
-                } else if (savedView === 'itemDetails') {
-                    const savedItemId = sessionStorage.getItem('currentItemId');
-                    if (savedItemId) {
-                        showItemDetails(auth, db, storage, savedItemId);
-                    } else {
-                        document.getElementById('home-link').click(); // Go home if ID is missing
-                    }
-
-                } else if (savedView === 'createListing') {
-                    // --- Handle create listing state ---
-                    appContent.innerHTML = createListingHTML;
-                    addListingFormListener(auth, db, storage);
+                // 3. Handle the redirect from Stripe
+                if (stripeAction === 'stripe_return' && stripeTab === 'payments') {
+                    // User just finished Stripe setup. Show them the dashboard on the payments tab.
+                    renderUserDashboard(auth, db, storage, 'payments');
                 
-                } else if (savedView === 'editListing') {
-                    // --- Handle edit listing state ---
-                    const savedItemId = sessionStorage.getItem('currentItemId');
-                    if (savedItemId) {
-                        // We must re-fetch the doc to pre-fill the form
-                        db.collection('listings').doc(savedItemId).get().then(doc => {
-                            if (doc.exists) {
-                                appContent.innerHTML = editListingHTML(doc.data());
-                                addEditFormListener(auth, db, storage, savedItemId);
-                            } else {
-                                alert("The item you were editing seems to be deleted.");
-                                document.getElementById('home-link').click();
-                            }
-                        }).catch(err => {
-                            console.error("Error fetching doc for edit:", err);
-                            document.getElementById('home-link').click();
-                        });
-                    } else {
-                        document.getElementById('home-link').click(); // Go home if ID is missing
-                    }
-
                 } else {
-                    // Default to the home view
-                    renderWelcomeView(currentUser, auth, db, storage);
+                    // 4. If no redirect, use the normal sessionStorage logic
+                    const savedView = sessionStorage.getItem('currentView');
+                    
+                    if (savedView === 'dashboard') {
+                        renderUserDashboard(auth, db, storage);
+                    } else if (savedView === 'itemDetails') {
+                        const savedItemId = sessionStorage.getItem('currentItemId');
+                        if (savedItemId) {
+                            showItemDetails(auth, db, storage, savedItemId);
+                        } else {
+                            document.getElementById('home-link').click();
+                        }
+                    } else if (savedView === 'createListing') {
+                        appContent.innerHTML = createListingHTML;
+                        addListingFormListener(auth, db, storage);
+                    } else if (savedView === 'editListing') {
+                        const savedItemId = sessionStorage.getItem('currentItemId');
+                        if (savedItemId) {
+                            db.collection('listings').doc(savedItemId).get().then(doc => {
+                                if (doc.exists) {
+                                    appContent.innerHTML = editListingHTML(doc.data());
+                                    addEditFormListener(auth, db, storage, savedItemId);
+                                } else {
+                                    alert("The item you were editing seems to be deleted.");
+                                    document.getElementById('home-link').click();
+                                }
+                            }).catch(err => {
+                                console.error("Error fetching doc for edit:", err);
+                                document.getElementById('home-link').click();
+                            });
+                        } else {
+                            document.getElementById('home-link').click();
+                        }
+                    } else {
+                        // Default to the home view
+                        renderWelcomeView(currentUser, auth, db, storage);
+                    }
                 }
+                
                 setupNotificationListener(auth, db, storage);
             } else {
                 // --- State 2: User is LOGGED IN but NOT FULLY VERIFIED ---
