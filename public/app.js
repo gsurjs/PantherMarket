@@ -1907,9 +1907,19 @@ function addCardEventListeners(auth, db, storage) {
             }
 
             try {
+                // 1. Check for email verification
                 const tokenResult = await currentUser.getIdTokenResult(false);
-                const isFullyVerified = tokenResult.claims.email_verified === true &&
-                                        tokenResult.claims.manuallyVerified === true;
+                const isEmailVerified = tokenResult.claims.email_verified === true;
+                
+                // 2. Check for manual verification in the Firestore document
+                let isManuallyVerified = false;
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists && userDoc.data().isManuallyVerified === true) {
+                    isManuallyVerified = true;
+                }
+                
+                // 3. Combine both checks
+                const isFullyVerified = isEmailVerified && isManuallyVerified;
 
                 if (isFullyVerified) {
                     const currentView = sessionStorage.getItem('currentView') || 'home';
