@@ -389,16 +389,22 @@ function setupAuthListener(auth, db, storage) {
 
             let tokenResult;
 
-            // bug fix, force refresh token before doing anything else
-            if (isNowEmailVerified && !wasEmailVerified) {
-                tokenResult = await currentUser.getIdTokenResult(true); 
-            } else {
-                tokenResult = await currentUser.getIdTokenResult(false);
+            tokenResult = await currentUser.getIdTokenResult(false);
+
+            // 1. Check for manual verification in the Firestore document
+            let isManuallyVerified = false;
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists && userDoc.data().isManuallyVerified === true) {
+                    isManuallyVerified = true;
+                }
+            } catch (e) {
+                console.error("Could not check manual verification status", e);
             }
-
-
+            
+            // 2. Combine both checks
             const isFullyVerified = tokenResult.claims.email_verified === true &&
-                                    tokenResult.claims.manuallyVerified === true;
+                                    isManuallyVerified === true;
 
             if (isFullyVerified) {
                 // --- State 1: User is LOGGED IN and FULLY VERIFIED ---
