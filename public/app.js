@@ -465,12 +465,14 @@ function setupAuthListener(auth, db, storage) {
                 // 3. Handle the redirect from Stripe
                 if (stripeAction === 'stripe_return' && stripeTab === 'payments') {
                     // User just finished Stripe setup.
+                    sessionStorage.setItem('currentDashboardTab', 'payments');
                     renderUserDashboard(auth, db, storage, 'payments');
                 
                 } else if (stripeAction === 'stripe_success') {
                     // User just successfully paid for an item.
                     // The webhook is marking it as sold in the background.
                     // Show them their "My Orders" page.
+                    sessionStorage.setItem('currentDashboardTab', 'my-orders');
                     renderUserDashboard(auth, db, storage, 'my-orders');
                     // also show a one-time success alert:
                     alert("Payment successful! Your order is being processed.");
@@ -485,7 +487,8 @@ function setupAuthListener(auth, db, storage) {
                     const savedView = sessionStorage.getItem('currentView');
                     
                     if (savedView === 'dashboard') {
-                        renderUserDashboard(auth, db, storage);
+                        const savedTab = sessionStorage.getItem('currentDashboardTab') || 'my-listings';
+                        renderUserDashboard(auth, db, storage, savedTab);
                     } else if (savedView === 'itemDetails') {
                         const savedItemId = sessionStorage.getItem('currentItemId');
                         if (savedItemId) {
@@ -715,6 +718,9 @@ async function renderUserDashboard(auth, db, storage, defaultTab = 'my-listings'
         tab.addEventListener('click', () => {
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
+
+            const tabName = tab.id.substring('tab-'.length); 
+            sessionStorage.setItem('currentDashboardTab', tabName);
 
             if (activeDashboardListener) {
                 activeDashboardListener(); // Call the unsubscribe function
