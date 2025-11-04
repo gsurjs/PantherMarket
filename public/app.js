@@ -1205,6 +1205,23 @@ async function showItemDetails(auth, db, storage, listingId) {
                     try {
                         const createSessionFunc = firebase.functions().httpsCallable('createStripeCheckoutSession');
                         const result = await createSessionFunc({ listingId: listingId });
+
+
+                        // 1. Get both values back from your backend function
+                        const { sessionId, stripeAccountId } = result.data;
+
+                        // 2. Your publishable key (from line 20)
+                        const publishableKey = 'pk_test_51SPblu2OqbuQAGApTQPlL3E3Fd6EPtlRSGDEKLB7XvGvG99wfirECHxW1VrF8WwBy4ql9sfNvKN81zpAbNLeY1lw007msYTFRh';
+
+                        // 3. Initialize a NEW Stripe object with the seller's account ID
+                        const stripeForSeller = Stripe(publishableKey, {
+                            stripeAccount: stripeAccountId
+                        });
+
+                        // 4. Use THIS new object to redirect
+                        await stripeForSeller.redirectToCheckout({
+                            sessionId: sessionId
+                        });
                         
                         // This 'stripe' variable is the one you initialized at the After
                         // top of app.js with your PUBLISHABLE key.
