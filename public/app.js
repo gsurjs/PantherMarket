@@ -5,7 +5,6 @@ const listingsGrid = document.getElementById('listings-grid');
 const listingsSection = document.getElementById('listings-section');
 //--STRIPE INIT-- public key
 const stripe = Stripe('pk_test_51SPblu2OqbuQAGApTQPlL3E3Fd6EPtlRSGDEKLB7XvGvG99wfirECHxW1VrF8WwBy4ql9sfNvKN81zpAbNLeY1lw007msYTFRh');
-const navLinks = document.getElementById('nav-links');
 
 
 // --- HTML TEMPLATES ---
@@ -1142,7 +1141,7 @@ async function showItemDetails(auth, db, storage, listingId) {
                     }
                 });
             }
-            
+
             const payBtn = document.getElementById('pay-with-stripe-btn');
             if (payBtn) {
                 payBtn.addEventListener('click', async () => {
