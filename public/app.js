@@ -174,14 +174,42 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
 
         ${isOwner ? `
         <div class="owner-actions">
-            <button id="edit-listing-btn-main" class="edit-listing-btn">Edit Listing</button>
-            <button id="delete-listing-btn-main" class="delete-listing-btn">Delete Listing</button>
-            <button id="mark-as-sold-btn-main" class="mark-as-sold-btn">Mark as Sold</button>
+
+            <div class="sales-action-box">
+                <h4>For Stripe Payment</h4>
+                <button id="show-meetup-pin-btn" class="submit-button">Generate Meetup Code</button>
+                <div id="meetup-pin-display" style="display: none;">
+                    <p>Buyer's code (expires in 5 min):</p>
+                    <h2 id="meetup-pin-code"></h2>
+                </div>
+                <p class="small-text">Generate this code when you meet the buyer. They must enter it to unlock their payment button.</p>
+            </div>
+
+            <div class="sales-action-box">
+                <h4>For Cash Sale</h4>
+                <button id="mark-as-sold-btn-main" class="mark-as-sold-btn">Mark as Sold (Cash)</button>
+                <p class="small-text">Use this if you accepted a cash payment in person.</p>
+            </div>
+
+            <div class="management-actions">
+                <h4>Manage Listing</h4>
+                <button id="edit-listing-btn-main" class="edit-listing-btn">Edit Details</button>
+                <button id="delete-listing-btn-main" class="delete-listing-btn">Delete Listing</button>
+            </div>
+
         </div>
         ` : `
         <div class="buyer-actions">
-            <button id="pay-with-stripe-btn" class="submit-button">Pay $${listing.price} with Stripe</button>
-            <p class="small-text">Note: You must still meet the seller to pick up your item.</p>
+            <div id="meetup-prompt-container">
+                <button id="enter-meetup-pin-btn" class="submit-button">Enter Meetup Code to Pay</button>
+                <p class="small-text">Get the 6-digit code from the seller when you meet in person to unlock payment.</p>
+                <p id="meetup-error" class="error"></p>
+            </div>
+
+            <div id="payment-container" style="display: none;">
+                <button id="pay-with-stripe-btn" class="submit-button">Pay $${listing.price} with Stripe</button>
+                <p class="small-text">Note: You must still meet the seller to pick up your item.</p>
+            </div>
         </div>
         `}
         <div id="reviews-modal" class="modal-overlay" style="display: none;">
@@ -1144,6 +1172,29 @@ async function showItemDetails(auth, db, storage, listingId) {
                     thumbnail.classList.add('active');
                 });
             });
+            //--Meetup PIN logic for Seller--
+            const showPinBtn = document.getElementById('show-meetup-pin-btn');
+            if (showPinBtn) {
+                showPinBtn.addEventListener('click', async () => {
+                    showPinBtn.textContent = 'Generating...';
+                    showPinBtn.disabled = true;
+
+                    try {
+                        const generateTokenFunc = firebase.functions().httpsCallable('generateMeetupToken');
+                        const result = await generateTokenFunc({ listingId: listingId });
+
+                        document.getElementById('meetup-pin-code').textContent = result.data.pin;
+                        document.getElementById('meetup-pin-display').style.display = 'block';
+                        showPinBtn.style.display = 'none'; // Hide button after generating
+
+                    } catch (error) {
+                        console.error("Error generating token:", error);
+                        alert(`Error: ${error.message}`);
+                        showPinBtn.textContent = 'Generate Meetup Code';
+                        showPinBtn.disabled = false;
+                    }
+                });
+            }
 
             const soldBtn = document.getElementById('mark-as-sold-btn-main');
             if (soldBtn) {
@@ -1209,6 +1260,37 @@ async function showItemDetails(auth, db, storage, listingId) {
                             deleteBtn.textContent = "Delete Listing";
                             deleteBtn.disabled = false;
                         }
+                    }
+                });
+            }
+            //--Meetup PIN logic for Buyer--
+            const enterPinBtn = document.getElementById('enter-meetup-pin-btn');
+            const meetupError = document.getElementById('meetup-error');
+            if (enterPinBtn) {
+                enterPinBtn.addEventListener('click', async () => {
+                    const pin = prompt("Please enter the 6-digit code from the seller:");
+                    if (!pin || pin.length !== 6) {
+                        meetupError.textContent = 'Please enter a valid 6-digit code.';
+                        return;
+                    }
+
+                    enterPinBtn.textContent = 'Verifying...';
+                    enterPinBtn.disabled = true;
+                    meetupError.textContent = '';
+
+                    try {
+                        const validateTokenFunc = firebase.functions().httpsCallable('validateMeetupToken');
+                        await validateTokenFunc({ listingId: listingId, pin: pin });
+
+                        // SUCCESS! Show the payment button
+                        document.getElementById('meetup-prompt-container').style.display = 'none';
+                        document.getElementById('payment-container').style.display = 'block';
+
+                    } catch (error) {
+                        console.error("Error validating token:", error);
+                        meetupError.textContent = `Error: ${error.message}`;
+                        enterPinBtn.textContent = 'Enter Meetup Code to Pay';
+                        enterPinBtn.disabled = false;
                     }
                 });
             }
