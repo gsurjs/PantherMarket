@@ -152,7 +152,7 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
         <p class="price">$${listing.price}</p>
         ${listing.isTrade ? `<p class="trade-info">🔄 This seller is open to trades.</p>` : ''}
         <p class="description">${listing.description}</p>
-        <p class="seller">Sold by: ${listing.sellerEmail}</p>
+        <p class="seller">Seller: ${listing.sellerEmail}</p>
         ${sellerRating.count > 0 ? `
             <div class="item-details-rating">
                 ${[...Array(5)].map((_, i) => `
