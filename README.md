@@ -2,11 +2,10 @@
   <img src="public/images/GitHub_Banner_PM.png" width="640" alt="PantherMarket Logo" />
 </p>
 <h1 align="center">PantherMarket</h1>
-<p align="center">
-  <strong>A Georgia State University EXCLUSIVE Marketplace</strong>
-  <br />
-  <a href="https://www.panthermarket.app/">PantherMarket.app</a>
-</p>
+<h3 align="center">A Georgia State University EXCLUSIVE Marketplace</h3>
+<h2 align="center">
+  <a href="https://www.panthermarket.app/" style="text-decoration: none; color: inherit;">PantherMarket.app</a>
+</h2>
 
 PantherMarket is a secure, exclusive buy/sell/trade marketplace built from the ground up for the Georgia State University community. To ensure safety and exclusivity, the platform requires a **two-step user verification process**:
 1.  **GSU Email Registration:** Users must register with a valid `@gsu.edu` or `@student.gsu.edu` email address.
