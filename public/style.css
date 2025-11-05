@@ -1601,7 +1601,8 @@ body.dark-mode .drag-handle {
     #meetup-pin-display p {
         font-size: 0.75rem;
     }
-    #app-content .item-details h2 {
+    #app-content h2,
+    #listings-section h2 {
         font-size: 1.4rem;  /* Reduced from 1.8rem */
         margin-bottom: 1rem; /* Also reduced margin for tighter spacing */
         line-height: 1.15;
