@@ -1522,25 +1522,19 @@ body.dark-mode .drag-handle {
     }
 
     .dashboard-tab {
-        flex: 0 0 auto; 
-        margin-right: 10px;
+        flex-grow: 1; 
+        flex-basis: 0;     
+        padding: 0.7rem 0.25rem;
+        font-size: 0.85rem;   /* Make font smaller */
+        white-space: nowrap;
+        text-align: center;   /* Center the text in the button */
+        flex: 0 0 auto;
+        margin-right: 0;
     }
     .dashboard-nav-tabs {
         display: flex;
-        overflow-x: auto; /* Allow horizontal scrolling */
-        white-space: nowrap; 
         flex-wrap: nowrap;
-        justify-content: flex-start;
-        scrollbar-width: none;
-        ms-overflow-style: none;
-    }
-
-    .dashboard-nav-tabs::-webkit-scrollbar {
-        display: none; /* Chrome, Safari, Opera */
-    }
-
-    .dashboard-tab:last-child {
-        margin-right: 0;
+        gap: 6px;
     }
     
     /* Mobile - Image preview adjustments */
