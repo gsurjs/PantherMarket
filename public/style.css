@@ -424,6 +424,9 @@ form textarea {
     margin-top: 1.5rem;
     display: flex;
     gap: 1rem;
+    gap: 1.25rem;
+    border-top: 2px solid #f0f0f0;
+    padding-top: 1.5rem;
 }
 
 #back-to-listings-btn {
@@ -512,6 +515,68 @@ form textarea {
     color: #003087;
     box-shadow: none;
     transform: none;
+}
+
+/* Common style for all action boxes */
+.sales-action-box,
+.management-actions {
+    flex: 1; /* Make them share space equally */
+    background: #f8f9fa; /* Light background */
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column; /* Stack items inside the box */
+}
+
+.sales-action-box h4,
+.management-actions h4 {
+    font-size: 1.1rem;
+    margin: 0 0 0.75rem 0; /* Tweak margin */
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid #e0e0e0;
+    color: #333;
+}
+
+/* Style for the helper text */
+.sales-action-box .small-text {
+    font-size: 0.85rem;
+    color: #555;
+    line-height: 1.4;
+    margin-top: auto; /* Pushes text to the bottom */
+    padding-top: 0.75rem; /* Add space above it */
+}
+
+/* Make buttons full-width inside the boxes */
+.sales-action-box button,
+.management-actions button {
+    width: 100%;
+}
+
+/* Special rule for management box to stack buttons */
+.management-actions {
+    gap: 0.5rem; /* Space out the two buttons */
+}
+
+/* Style for the PIN display */
+#meetup-pin-display {
+    text-align: center;
+    background: #fff;
+    padding: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    margin-bottom: 0.75rem;
+}
+#meetup-pin-display p {
+    font-size: 0.8rem;
+    margin: 0;
+    color: #444;
+}
+#meetup-pin-code {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #003087;
+    margin: 0;
 }
 
 /* --- Image Upload Preview with Drag & Drop --- */
@@ -896,6 +961,38 @@ form textarea {
 
 .dark-mode .notification-item.is-unread {
     background-color: #2c3a52; /* Darker blue */
+}
+
+/* Dark Mode for Owner Actions */
+body.dark-mode .owner-actions {
+    border-top-color: #3a3a3a;
+}
+
+body.dark-mode .sales-action-box,
+body.dark-mode .management-actions {
+    background: #2a2a2a;
+    border-color: #4a4a4a;
+}
+
+body.dark-mode .sales-action-box h4,
+body.dark-mode .management-actions h4 {
+    color: #e0e0e0;
+    border-bottom-color: #4a4a4a;
+}
+
+body.dark-mode .sales-action-box .small-text {
+    color: #aaa;
+}
+
+body.dark-mode #meetup-pin-display {
+    background: #333;
+    border-color: #4a4a4a;
+}
+body.dark-mode #meetup-pin-display p {
+    color: #bbb;
+}
+body.dark-mode #meetup-pin-code {
+    color: #55c5ff; /* A light blue for dark mode */
 }
 
 /* --- Dashboard Card ("My Listings" tab) --- */
@@ -1456,6 +1553,11 @@ body.dark-mode .drag-handle {
 
     .order-card-actions .leave-review-btn {
         width: 100%;
+    }
+
+    .owner-actions {
+        flex-direction: column; /* Stack the action boxes */
+        gap: 0.75rem; /* Reduce gap for mobile */
     }
 
     #notification-dropdown {
