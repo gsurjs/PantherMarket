@@ -1598,6 +1598,7 @@ body.dark-mode .drag-handle {
     #app-content .item-details h2 {
         font-size: 1.4rem;  /* Reduced from 1.8rem */
         margin-bottom: 1rem; /* Also reduced margin for tighter spacing */
+        line-height: 1.15;
     }
 
     #notification-dropdown {
