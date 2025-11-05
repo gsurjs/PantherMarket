@@ -262,9 +262,9 @@ const userDashboardHTML = `
     </div>
 
     <div class="dashboard-nav-tabs">
-        <button id="tab-my-listings" class="dashboard-tab active">Listings</button>
-        <button id="tab-my-orders" class="dashboard-tab">Orders</button>
-        <button id="tab-my-reviews" class="dashboard-tab">Reviews</button>
+        <button id="tab-my-listings" class="dashboard-tab active">My Listings</button>
+        <button id="tab-my-orders" class="dashboard-tab">My Orders</button>
+        <button id="tab-my-reviews" class="dashboard-tab">My Reviews</button>
         <button id="tab-payments" class="dashboard-tab">Payments</button>
     </div>
 
