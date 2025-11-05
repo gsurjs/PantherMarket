@@ -418,6 +418,8 @@ form textarea {
 .item-details .seller {
     color: #555;
     font-style: italic;
+    margin-top: 1rem;
+    font-weight: bold;
 }
 
 .owner-actions {
@@ -966,6 +968,10 @@ form textarea {
 /* Dark Mode for Owner Actions */
 body.dark-mode .owner-actions {
     border-top-color: #3a3a3a;
+}
+
+body.dark-mode .item-details .seller {
+    color: #aaa;
 }
 
 body.dark-mode .sales-action-box,
