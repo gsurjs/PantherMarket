@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="public/images/PM_Logo.png" width="300" alt="PantherMarket Logo" />
+  <img src="public/images/GitHub_Banner_PM.png" width="300" alt="PantherMarket Logo" />
 </p>
 <h1 align="center">PantherMarket</h1>
 <p align="center">
