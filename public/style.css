@@ -1529,6 +1529,8 @@ body.dark-mode .drag-handle {
         display: flex;
         overflow-x: auto; /* Allow horizontal scrolling */
         white-space: nowrap; 
+        flex-wrap: nowrap;
+        justify-content: flex-start;
         scrollbar-width: none;
         ms-overflow-style: none;
     }
