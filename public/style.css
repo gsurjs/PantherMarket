@@ -1531,10 +1531,17 @@ body.dark-mode .drag-handle {
         flex: 0 0 auto;
         margin-right: 0;
     }
+
+    .dashboard-profile-header {
+        margin-bottom: 1rem;  /* Reduced from 2rem */
+        padding-bottom: 1rem; /* Reduced from 1.5rem */
+    }
+    
     .dashboard-nav-tabs {
         display: flex;
         flex-wrap: nowrap;
         gap: 6px;
+        margin-bottom: 1rem;
     }
     
     /* Mobile - Image preview adjustments */
