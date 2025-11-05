@@ -187,8 +187,8 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
 
             <div class="sales-action-box">
                 <h4>For Cash Sale</h4>
-                <button id="mark-as-sold-btn-main" class="mark-as-sold-btn">Mark as Sold (Cash)</button>
-                <p class="small-text">Use this if you accepted a cash payment in person.</p>
+                <button id="mark-as-sold-btn-main" class="mark-as-sold-btn">Mark as Sold (Cash/Trade)</button>
+                <p class="small-text">Use this if you accepted a cash payment/trade in person.</p>
             </div>
 
             <div class="management-actions">
