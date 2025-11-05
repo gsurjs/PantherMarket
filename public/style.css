@@ -1006,7 +1006,7 @@ body.dark-mode #meetup-pin-code {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    cursor: default; /* Not clickable like main cards */
+    cursor: pointer;
 }
 
 .my-listing-card-actions {

@@ -792,71 +792,88 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
     containerElement.appendChild(myGrid);
 
     myGrid.addEventListener('click', (e) => {
-        const target = e.target.closest('button');
-        if (!target) return;
+        const buttonTarget = e.target.closest('button');
 
-        const listingId = target.dataset.id;
+        // --- 1. Check for Button Clicks FIRST ---
+        if (buttonTarget) {
+            const listingId = buttonTarget.dataset.id;
 
-        if (target.classList.contains('mark-as-sold-btn')) {
-            let buyerEmail = prompt("Please enter the buyer's GSU email address:");
-            if (buyerEmail) {
-                buyerEmail = buyerEmail.toLowerCase().trim();
-            }
-            if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
-                const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
-                target.textContent = "Processing...";
-                target.disabled = true;
-                
-                markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
-                    .then(result => {
-                        alert("Listing successfully marked as sold!");
-                    })
-                    .catch(error => {
-                        console.error("Error marking as sold:", error);
-                        alert(`Error: ${error.message}`);
-                        target.textContent = "Mark as Sold";
-                        target.disabled = false;
-                    });
-            } else if (buyerEmail) {
-                alert("Invalid GSU email address.");
-            }
-        }
-
-        if (target.classList.contains('edit-listing-btn')) {
-            db.collection('listings').doc(listingId).get().then(doc => {
-                if (doc.exists) {
-                    sessionStorage.setItem('currentView', 'editListing');
-                    sessionStorage.setItem('currentItemId', listingId); // This was the other bug fix
-                    appContent.innerHTML = editListingHTML(doc.data());
-                    addEditFormListener(auth, db, storage, listingId);
+            if (buttonTarget.classList.contains('mark-as-sold-btn')) {
+                let buyerEmail = prompt("Please enter the buyer's GSU email address:");
+                if (buyerEmail) {
+                    buyerEmail = buyerEmail.toLowerCase().trim();
                 }
-            });
-        }
-        if (target.classList.contains('delete-listing-btn')) {
-            if (confirm('Are you sure you want to permanently delete this listing? This cannot be undone.')) {
-                target.textContent = "Deleting...";
-                target.disabled = true;
-
-                db.collection('listings').doc(listingId).delete()
-                    .then(() => {
-                        // Manually remove the card from the UI
-                        const card = target.closest('.listing-card');
-                        if (card) {
-                            card.remove();
-                        }
-                        alert('Listing deleted.');
-                        // Check if grid is now empty
-                        if (myGrid.children.length === 0) {
-                            myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
-                        }
-                    })
-                    .catch(err => {
-                        console.error("Error deleting listing:", err);
-                        alert('Failed to delete listing.');
-                        target.textContent = "Delete";
-                        target.disabled = false;
-                    });
+                if (buyerEmail && (buyerEmail.endsWith('@student.gsu.edu') || buyerEmail.endsWith('@gsu.edu'))) {
+                    const markAsSoldFunc = firebase.functions().httpsCallable('markAsSold');
+                    buttonTarget.textContent = "Processing...";
+                    buttonTarget.disabled = true;
+                    
+                    markAsSoldFunc({ listingId: listingId, buyerEmail: buyerEmail })
+                        .then(result => {
+                            alert("Listing successfully marked as sold!");
+                        })
+                        .catch(error => {
+                            console.error("Error marking as sold:", error);
+                            alert(`Error: ${error.message}`);
+                            buttonTarget.textContent = "Mark as Sold";
+                            buttonTarget.disabled = false;
+                        });
+                } else if (buyerEmail) {
+                    alert("Invalid GSU email address.");
+                }
+                return; // Stop after button logic
             }
+
+            if (buttonTarget.classList.contains('edit-listing-btn')) {
+                db.collection('listings').doc(listingId).get().then(doc => {
+                    if (doc.exists) {
+                        sessionStorage.setItem('currentView', 'editListing');
+                        sessionStorage.setItem('currentItemId', listingId); 
+                        appContent.innerHTML = editListingHTML(doc.data());
+                        addEditFormListener(auth, db, storage, listingId);
+                    }
+                });
+                return; // Stop after button logic
+            }
+
+            if (buttonTarget.classList.contains('delete-listing-btn')) {
+                if (confirm('Are you sure you want to permanently delete this listing? This cannot be undone.')) {
+                    buttonTarget.textContent = "Deleting...";
+                    buttonTarget.disabled = true;
+
+                    db.collection('listings').doc(listingId).delete()
+                        .then(() => {
+                            const card = buttonTarget.closest('.listing-card');
+                            if (card) {
+                                card.remove();
+                            }
+                            alert('Listing deleted.');
+                            if (myGrid.children.length === 0) {
+                                myGrid.innerHTML = '<p>You have not created any listings yet.</p>';
+                            }
+                        })
+                        .catch(err => {
+                            console.error("Error deleting listing:", err);
+                            alert('Failed to delete listing.');
+                            buttonTarget.textContent = "Delete";
+                            buttonTarget.disabled = false;
+                        });
+                }
+                return; // Stop after button logic
+            }
+        }
+
+        // --- 2. If no button was clicked, check for a Card Click ---
+        const cardTarget = e.target.closest('.my-listing-card');
+        if (cardTarget) {
+            const listingId = cardTarget.dataset.id;
+
+            // Save our current view so the "Back" button works correctly
+            const currentView = sessionStorage.getItem('currentView') || 'home';
+            sessionStorage.setItem('previousView', currentView);
+
+            // Go to the details page
+            showItemDetails(auth, db, storage, listingId);
         }
     });
 
