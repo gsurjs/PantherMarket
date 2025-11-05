@@ -1,4 +1,5 @@
-# 🐾 PantherMarket
+![PM_Logo](images/PM_Logo.png) 
+# PantherMarket
 
 [PantherMarket.app](https://www.panthermarket.app/)
 
