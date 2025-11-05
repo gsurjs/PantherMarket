@@ -1,4 +1,4 @@
-![PM_Logo](images/PM_Logo.png) 
+![PM_Logo](public/images/PM_Logo.png) 
 # PantherMarket
 
 [PantherMarket.app](https://www.panthermarket.app/)
