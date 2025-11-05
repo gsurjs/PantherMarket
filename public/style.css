@@ -1595,6 +1595,10 @@ body.dark-mode .drag-handle {
     #meetup-pin-display p {
         font-size: 0.75rem;
     }
+    .item-details h2 {
+        font-size: 1.4rem;  /* Reduced from 1.8rem */
+        margin-bottom: 1rem; /* Also reduced margin for tighter spacing */
+    }
 
     #notification-dropdown {
         position: fixed;   /* Anchor to viewport */
