@@ -824,11 +824,26 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
 
             // 2. Sort the array by createdAt date, newest first
             listings.sort((a, b) => {
-                const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0; // <-- FIX
-                const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0; // <-- FIX
-                return timeB - timeA; // b - a for descending order
+                const statusA = a.data.status;
+                const statusB = b.data.status;
+                const timeA = a.data.createdAt ? a.data.createdAt.toMillis() : 0;
+                const timeB = b.data.createdAt ? b.data.createdAt.toMillis() : 0;
+
+                // 1. Primary Sort: by status
+                // If 'a' is active and 'b' is sold, 'a' comes first (return -1)
+                if (statusA === 'active' && statusB === 'sold') {
+                    return -1;
+                }
+                // If 'a' is sold and 'b' is active, 'b' comes first (return 1)
+                if (statusA === 'sold' && statusB === 'active') {
+                    return 1;
+                }
+
+                // 2. Secondary Sort: by date (if statuses are the same)
+                // Both are 'active' or both are 'sold', so sort by newest first.
+                return timeB - timeA;
+
             });
-            // --- End client-side sorting ---
 
             // 3. Render the sorted listings
             listings.forEach(listing => {
