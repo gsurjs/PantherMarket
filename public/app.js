@@ -278,7 +278,7 @@ const myListingCardHTML = (listing, id) => {
     }
 
     return `
-    <div class="listing-card my-listing-card" data-id="${id}">
+    <div class="listing-card my-listing-card" data-id="${id}" data-status="${listing.status}">
         <img src="${imageUrl}" alt="${listing.title}">
         <div class="listing-card-info">
             <h3>${listing.title}</h3>
@@ -794,7 +794,11 @@ function renderMyListingsTab(auth, db, storage, containerElement) {
         const cardTarget = e.target.closest('.my-listing-card');
         if (cardTarget) {
             const listingId = cardTarget.dataset.id;
+            const listingStatus = cardTarget.dataset.status;
 
+            if (listingStatus === 'sold') {
+                return; // Stop right here if the item is sold
+            }
             // Save our current view so the "Back" button works correctly
             const currentView = sessionStorage.getItem('currentView') || 'home';
             sessionStorage.setItem('previousView', currentView);
