@@ -33,18 +33,6 @@ header h1 {
     letter-spacing: -0.5px;
 }
 
-#logo-container {
-    display: flex;
-    justify-content: center; 
-    align-items: center; 
-    gap: 0.75rem; 
-}
-
-#header-logo {
-    height: 3.5rem;
-    width: auto;
-}
-
 header h3 {
     font-size: 1.1rem;
     font-weight: 400;
@@ -1450,14 +1438,6 @@ body.dark-mode .drag-handle {
     header h1 {
         font-size: 1.8rem;
         margin-bottom: 0.25rem;
-    }
-
-    #logo-container {
-        gap: 0.5rem;
-    }
-
-    #header-logo {
-        height: 2.5rem;
     }
 
     header h2 {
