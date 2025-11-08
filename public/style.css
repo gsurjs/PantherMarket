@@ -1483,7 +1483,7 @@ body.dark-mode .drag-handle {
     #back-to-listings-btn {
         position: -webkit-sticky;
         position: sticky;
-        top: 50px;
+        top: 155px;
         z-index: 100;
     }
 
