@@ -2089,11 +2089,10 @@ function addAuthFormListeners(auth, db) {
 
             if (!email) return; // User cancelled the prompt
 
-            try { // override since firebase doesn't allow multiple action URLs
-                const actionCodeSettings = {
-                    url: 'https://panthermarket.app/reset.html'
-                };
-                await auth.sendPasswordResetEmail(email, actionCodeSettings);
+            try {
+                // uses the "Password reset" template configured in the Firebase console.
+                // it points to new /reset.html page.
+                await auth.sendPasswordResetEmail(email);
                 authErrorElement.style.color = 'green';
                 authErrorElement.textContent = 'Success! Please check your email for a password reset link.';
             } catch (error) {
