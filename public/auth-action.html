@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Action - PantherMarket</title>
+    <link rel="stylesheet" href="style.css">
+
+    <style>
+        #action-content {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        #action-content h2, #action-content p {
+            text-align: center;
+        }
+        #action-content p {
+            margin-bottom: 1.5rem;
+        }
+        #new-password {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            margin-bottom: 1.5rem;
+        }
+        #recaptcha-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+        #confirm-action-btn {
+            width: 100%;
+        }
+    </style>
+
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+</head>
+<body>
+    <header>
+        <h1>PantherMarket</h1>
+        <h3>A GSU Only Marketplace</h3>
+    </header>
+    <main>
+        <div id="action-content">
+            <h2 id="action-title">Loading...</h2>
+            <p id="action-description">Please wait while we verify your link.</p>
+            
+            <div id="reset-section" style="display: none;">
+                <input type="password" id="new-password" placeholder="New Password" required>
+            </div>
+
+            <div id="recaptcha-container" class="g-recaptcha" style="display: none;"></div>
+            <button id="confirm-action-btn" style="display: none;" disabled>Confirm</button>
+            
+            <p id="error-message" class="error"></p>
+        </div>
+    </main>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
+<script>
+    // --- Get Elements ---
+    const actionContent = document.getElementById('action-content');
+    const title = document.getElementById('action-title');
+    const description = document.getElementById('action-description');
+    const resetSection = document.getElementById('reset-section');
+    const recaptchaContainer = document.getElementById('recaptcha-container');
+    const confirmButton = document.getElementById('confirm-action-btn');
+    const errorMessage = document.getElementById('error-message');
+    
+    let recaptchaToken = null;
+
+    // --- reCAPTCHA Functions ---
+    function onRecaptchaLoad() {
+        if (window.siteKey) renderRecaptcha();
+    }
+    function onRecaptchaSuccess(token) {
+        recaptchaToken = token;
+        confirmButton.disabled = false;
+    }
+    function renderRecaptcha() {
+        grecaptcha.render('recaptcha-container', {
+            'sitekey': window.siteKey,
+            'callback': onRecaptchaSuccess
+        });
+    }
+
+    // --- (FROM verify.html) ---
+    async function verifyWithApi(oobCode) {
+        confirmButton.disabled = true;
+        confirmButton.textContent = 'Verifying...';
+        errorMessage.textContent = '';
+        try {
+            const response = await fetch('/api/verify', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ oobCode, recaptchaToken }),
+            });
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Verification failed.');
+
+            confirmButton.textContent = 'Finalizing...';
+            await waitForClaims(window.auth);
+
+            actionContent.innerHTML = `
+                <h2>Email Verified!</h2>
+                <p>Thank you! Your email has been successfully verified.</p>
+                <a href="/" style="text-decoration: none;"><button>Go to PantherMarket</button></a>
+            `;
+        } catch (error) {
+            errorMessage.textContent = error.message;
+            confirmButton.disabled = false;
+            confirmButton.textContent = 'Confirm My Email';
+            if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+        }
+    }
+
+    // --- (FROM verify.html) ---
+    async function waitForClaims(auth) {
+        const user = await new Promise((resolve, reject) => {
+            const unsubscribe = auth.onAuthStateChanged(user => {
+                unsubscribe();
+                if (user) resolve(user);
+                else reject(new Error("You must be logged in to verify."));
+            }, reject);
+        });
+
+        for (let i = 0; i < 10; i++) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const tokenResult = await user.getIdTokenResult(true);
+            if (tokenResult.claims.manuallyVerified === true) return true;
+        }
+        throw new Error("Verification is taking longer than usual. Please refresh and try again.");
+    }
+
+    // --- (FROM reset.html) ---
+    async function handlePasswordReset(oobCode) {
+        const newPassword = document.getElementById('new-password').value;
+        if (newPassword.length < 6) {
+            errorMessage.textContent = 'Password must be at least 6 characters long.';
+            return;
+        }
+        confirmButton.disabled = true;
+        confirmButton.textContent = 'Resetting...';
+        errorMessage.textContent = '';
+
+        try {
+            await window.auth.confirmPasswordReset(oobCode, newPassword);
+            actionContent.innerHTML = `
+                <h2>Password Reset!</h2>
+                <p>Your password has been successfully reset.</p>
+                <a href="/" style="text-decoration: none;"><button>Go to PantherMarket</button></a>
+            `;
+        } catch (error) {
+            errorMessage.textContent = `Error: ${error.message}`;
+            confirmButton.disabled = false;
+            confirmButton.textContent = 'Reset My Password';
+            if (typeof grecaptcha !== 'undefined') grecaptcha.reset();
+        }
+    }
+
+    // --- Main Router Function ---
+    async function initialize() {
+        try {
+            // 1. Get Config and Init Firebase
+            const response = await fetch('/api/config');
+            const config = await response.json();
+            const { recaptchaSiteKey, ...firebaseConfig } = config;
+            
+            window.siteKey = recaptchaSiteKey;
+            firebase.initializeApp(firebaseConfig);
+            window.auth = firebase.auth();
+
+            if (typeof grecaptcha !== 'undefined' && grecaptcha.render) {
+                renderRecaptcha();
+            }
+
+            // 2. Read the URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const mode = urlParams.get('mode');
+            const oobCode = urlParams.get('oobCode');
+
+            if (!mode || !oobCode) {
+                throw new Error("Invalid or missing action link.");
+            }
+
+            // 3. Route to the correct UI
+            if (mode === 'verifyEmail') {
+                title.textContent = "Confirm You're Human";
+                description.textContent = "Please complete the check below to finalize your email verification.";
+                confirmButton.textContent = 'Confirm My Email';
+                
+                // Show the UI
+                description.style.display = 'block';
+                recaptchaContainer.style.display = 'flex';
+                confirmButton.style.display = 'block';
+                
+                // Add correct listener
+                confirmButton.addEventListener('click', () => verifyWithApi(oobCode));
+
+            } else if (mode === 'resetPassword') {
+                // First, check if the code is valid *before* showing the form
+                await window.auth.verifyPasswordResetCode(oobCode);
+                
+                title.textContent = 'Reset Your Password';
+                description.textContent = "Please complete the check below and enter your new password.";
+                confirmButton.textContent = 'Reset My Password';
+
+                // Show the UI
+                description.style.display = 'block';
+                resetSection.style.display = 'block'; // <-- Show password field
+                recaptchaContainer.style.display = 'flex';
+                confirmButton.style.display = 'block';
+
+                // Add correct listener
+                confirmButton.addEventListener('click', () => handlePasswordReset(oobCode));
+
+            } else {
+                throw new Error("Unknown action.");
+            }
+
+        } catch (error) {
+            console.error("Initialization Error:", error);
+            actionContent.innerHTML = `<h2>Error</h2><p>${error.message}</p><p>This link may be invalid or expired.</p>`;
+        }
+    }
+
+    // Run the app
+    initialize();
+</script>
+</body>
+</html>
