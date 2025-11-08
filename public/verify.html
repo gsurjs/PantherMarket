@@ -5,6 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Verify Email - PantherMarket</title>
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        #verification-content {
+            /* These styles create the white card */
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
+            /* These styles center the card itself */
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Center the text */
+        #verification-content h2, #verification-content p {
+            text-align: center;
+        }
+        #verification-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* This will properly center the reCAPTCHA widget */
+        #recaptcha-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Make the confirm button full-width */
+        #confirm-verification-btn {
+            width: 100%;
+        }
+    </style>
+
     <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
 </head>
 <body>
@@ -17,9 +52,7 @@
             <h2>Confirm You're Human</h2>
             <p>Please complete the check below to finalize your email verification.</p>
             
-            <div class="g-recaptcha" data-callback="onRecaptchaSuccess" style="margin: 1.5rem auto; display: inline-block;"></div>
-            
-            <div id="recaptcha-container" class="g-recaptcha" style="margin: 1.5rem auto; display: inline-block;"></div>
+            <div id="recaptcha-container" class="g-recaptcha"></div>
 
             <button id="confirm-verification-btn" disabled>Confirm My Email</button>
             <p id="error-message" class="error"></p>
