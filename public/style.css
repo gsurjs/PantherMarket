@@ -1448,7 +1448,6 @@ body.dark-mode .drag-handle {
 
     header {
         padding: 1rem 0.5rem;
-        position: relative;
     }
 
     header h1 {
@@ -1484,7 +1483,7 @@ body.dark-mode .drag-handle {
     #back-to-listings-btn {
         position: -webkit-sticky;
         position: sticky;
-        top: 50px;
+        top: 155px;
         z-index: 100;
     }
 
