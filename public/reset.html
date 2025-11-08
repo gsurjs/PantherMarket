@@ -6,6 +6,56 @@
     <title>Reset Password - PantherMarket</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        #reset-content {
+            /* These styles create the white card */
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+
+            /* These styles center the card itself */
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Center the text */
+        #reset-content h2, #reset-content p {
+            text-align: center;
+        }
+        #reset-content p {
+            margin-bottom: 1.5rem;
+        }
+
+        /* Style the new password input to match site */
+        #new-password {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            margin-bottom: 1.5rem;
+        }
+
+        /* properly center the reCAPTCHA widget */
+        #recaptcha-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+        }
+
+        /* Make the reset button full-width */
+        #confirm-reset-btn {
+            width: 100%;
+        }
+    </style>
+    
+    <script src="https://www.google.com/recaptcha/api.js?onload=onRecaptchaLoad&render=explicit" async defer></script>
+</head>
+
 </head>
 <body>
     <header>
@@ -17,9 +67,9 @@
             <h2>Reset Your Password</h2>
             <p>Please complete the check below and enter your new password.</p>
             
-            <input type="password" id="new-password" placeholder="New Password" required style="display: none; margin: 1rem auto; width: 80%; max-width: 300px; padding: 10px; font-size: 1rem;">
+           <input type="password" id="new-password" placeholder="New Password" required style="display: none;">
             
-            <div id="recaptcha-container" class="g-recaptcha" style="margin: 1.5rem auto; display: none; inline-block;"></div>
+            <div id="recaptcha-container" class="g-recaptcha" style="display: none;"></div>
 
             <button id="confirm-reset-btn" style="display: none;" disabled>Reset My Password</button>
             <p id="error-message" class="error"></p>
