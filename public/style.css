@@ -1481,6 +1481,13 @@ body.dark-mode .drag-handle {
         padding: 0;
     }
 
+    #back-to-listings-btn {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 100px;
+        z-index: 100;
+    }
+
     #nav-links {
         flex-wrap: wrap;
         justify-content: center;
