@@ -445,6 +445,10 @@ form textarea {
 
 #back-to-listings-btn {
     margin-bottom: 1.5rem;
+    position: -webkit-sticky;
+    position: sticky;
+    top: 209px;   
+    z-index: 100; 
 }
 
 /* --- Image Gallery --- */
@@ -1475,6 +1479,13 @@ body.dark-mode .drag-handle {
         gap: 0.75rem;
         width: 100%;
         padding: 0;
+    }
+
+    #back-to-listings-btn {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 20px;
+        z-index: 100;
     }
 
     #nav-links {
