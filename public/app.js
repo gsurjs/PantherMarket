@@ -25,6 +25,7 @@ const loginHTML = `
         <input type="password" id="login-password" placeholder="Password" required>
         <button type="submit">Login</button>
     </form>
+    <a href="#" id="forgot-password-link">Forgot Password?</a>
     <p id="auth-error" class="error"></p>
 `;
 
@@ -2070,6 +2071,32 @@ function addAuthFormListeners(auth, db) {
                 await auth.signInWithEmailAndPassword(email, password);
                 // The onAuthStateChanged listener will handle the redirect.
             } catch (error) {
+                authErrorElement.textContent = error.message;
+            }
+        });
+    }
+    const forgotPasswordLink = document.getElementById('forgot-password-link');
+    if (forgotPasswordLink) {
+        forgotPasswordLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            authErrorElement.textContent = '';
+            
+            // Try to get email from the login form first
+            let email = document.getElementById('login-email').value;
+            if (!email) {
+                email = prompt("Please enter your GSU email address to reset your password:");
+            }
+
+            if (!email) return; // User cancelled the prompt
+
+            try {
+                // uses the "Password reset" template configured in the Firebase console.
+                // it points to new /reset.html page.
+                await auth.sendPasswordResetEmail(email);
+                authErrorElement.style.color = 'green';
+                authErrorElement.textContent = 'Success! Please check your email for a password reset link.';
+            } catch (error) {
+                authErrorElement.style.color = 'red';
                 authErrorElement.textContent = error.message;
             }
         });
