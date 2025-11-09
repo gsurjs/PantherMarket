@@ -201,6 +201,7 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
         </div>
         ` : `
         <div class="buyer-actions">
+            <button id="inquire-btn" class="submit-button">Inquire Availability</button>
             <div id="meetup-prompt-container">
                 <button id="enter-meetup-pin-btn" class="submit-button">Enter Meetup Code to Pay</button>
                 <p class="small-text">Get the 6-digit code from the seller when you meet in person to unlock payment.</p>
@@ -336,6 +337,191 @@ const createReviewHTML = (listingTitle) => `
     </form>
     <p id="form-error" class="error"></p>
 `;
+
+const inquiryCardHTML = (inquiry, currentUserId) => {
+    const isSeller = inquiry.sellerId === currentUserId;
+    let cardContent = '';
+
+    if (isSeller) {
+        // Seller's view
+        switch (inquiry.status) {
+            case 'pending_seller_response':
+                cardContent = `
+                    <p>Buyer ${inquiry.buyerEmail} is interested.</p>
+                    <div class="inquiry-actions">
+                        <button class="inquiry-confirm-btn" data-id="${inquiry.id}">Propose Meetup</button>
+                        <button class="inquiry-deny-btn" data-id="${inquiry.id}">Deny</button>
+                    </div>
+                `;
+                break;
+            case 'seller_confirmed':
+                cardContent = `<p>You proposed a meetup. Waiting for buyer to accept.</p>`;
+                break;
+            case 'seller_denied':
+                cardContent = `<p>You denied this inquiry.</p>`;
+                break;
+            // Add more cases here (e.g., 'buyer_accepted')
+            default:
+                cardContent = `<p>Status: ${inquiry.status}</p>`;
+        }
+    } else {
+        // buyer's view
+        switch (inquiry.status) {
+            case 'pending_seller_response':
+                cardContent = `<p>Waiting for seller to respond...</p>`;
+                break;
+            case 'seller_confirmed':
+                const proposal = inquiry.meetupProposal;
+                // Format the time for display. new Date() can parse the ISO string.
+                const prettyTime = new Date(proposal.time).toLocaleString('en-US', { 
+                    dateStyle: 'medium', 
+                    timeStyle: 'short' 
+                });
+                
+                // --- CALENDAR LINK ---
+                // Format for .ics file (YYYYMMDDTHHmmSSZ)
+                const icsTime = new Date(proposal.time).toISOString().replace(/-|:|\.\d+/g, '');
+
+                const icsContent = [
+                    "BEGIN:VCALENDAR", "VERSION:2.0", "BEGIN:VEVENT",
+                    `SUMMARY:PantherMarket Meetup: ${inquiry.listingTitle}`,
+                    `LOCATION:${proposal.location}`,
+                    `DTSTART:${icsTime}`,
+                    // Simple 1-hour duration for the calendar event
+                    `DTEND:${new Date(new Date(proposal.time).getTime() + 60*60*1000).toISOString().replace(/-|:|\.\d+/g, '')}`,
+                    "END:VEVENT", "END:VCALENDAR"
+                ].join('\n');
+                
+                const calendarLink = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsContent);
+
+                cardContent = `
+                    <p class="success">Seller has proposed a meetup!</p>
+                    <p><strong>When:</strong> ${prettyTime}</p>
+                    <p><strong>Where:</strong> ${proposal.location}</p>
+                    <div class="inquiry-actions">
+                        <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
+                    </div>
+                `;
+                break;
+            case 'seller_denied':
+                cardContent = `<p class="error">The seller is not available or the item is sold.</p>`;
+                break;
+            default:
+                cardContent = `<p>Status: ${inquiry.status}</p>`;
+        }
+    }
+
+    return `
+        <div class="inquiry-card" data-id="${inquiry.id}">
+            <h4>${inquiry.listingTitle}</h4>
+            ${cardContent}
+        </div>
+    `;
+};
+
+// Renders the "Inquiries" tab content and handles its logic.
+async function renderInquiriesTab(auth, db, storage, containerElement) {
+    const user = auth.currentUser;
+    containerElement.innerHTML = '<h2>Inquiries</h2>'; // Set title
+    
+    const listContainer = document.createElement('div');
+    containerElement.appendChild(listContainer);
+    listContainer.innerHTML = '<p>Loading your inquiries...</p>';
+
+    try {
+        // Query for inquiries where I am the buyer OR the seller
+        const buyerQuery = db.collection('inquiries').where('buyerId', '==', user.uid).get();
+        const sellerQuery = db.collection('inquiries').where('sellerId', '==', user.uid).get();
+
+        const [buyerSnapshot, sellerSnapshot] = await Promise.all([buyerQuery, sellerQuery]);
+
+        const inquiries = [];
+        buyerSnapshot.forEach(doc => inquiries.push({ id: doc.id, ...doc.data() }));
+        sellerSnapshot.forEach(doc => inquiries.push({ id: doc.id, ...doc.data() }));
+
+        if (inquiries.length === 0) {
+            listContainer.innerHTML = '<p>You have no inquiries.</p>';
+            return;
+        }
+
+        // Sort by most recently updated
+        inquiries.sort((a, b) => (b.updatedAt?.toMillis() || 0) - (a.updatedAt?.toMillis() || 0));
+
+        listContainer.innerHTML = ''; // Clear loading
+        inquiries.forEach(inquiry => {
+            listContainer.innerHTML += inquiryCardHTML(inquiry, user.uid);
+        });
+
+        // Add event listeners for the new buttons
+        listContainer.addEventListener('click', async (e) => {
+            const inquiryId = e.target.dataset.id;
+            const respondFunc = firebase.functions().httpsCallable('respondToInquiry');
+
+            if (e.target.classList.contains('inquiry-deny-btn')) {
+                if (!confirm("Are you sure you want to deny this inquiry?")) return;
+                
+                e.target.textContent = "Denying...";
+                e.target.disabled = true;
+                try {
+                    await respondFunc({ inquiryId: inquiryId, action: 'deny' });
+                    renderInquiriesTab(auth, db, storage, containerElement); // Refresh list
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                    e.target.textContent = "Deny";
+                    e.target.disabled = false;
+                }
+            }
+
+            if (e.target.classList.contains('inquiry-confirm-btn')) {
+                // Replace the card content with the proposal form
+                const card = e.target.closest('.inquiry-card');
+                card.innerHTML += `
+                    <div class="proposal-form">
+                        <label>Meetup Date & Time:</label>
+                        <input type="datetime-local" id="meetup-time-${inquiryId}" required>
+                        <label>Proposed Location:</label>
+                        <textarea id="meetup-location-${inquiryId}" placeholder="e.g., GSU Student Center, 1st floor"></textarea>
+                        <button class="submit-proposal-btn" data-id="${inquiryId}">Send Proposal</button>
+                    </div>
+                `;
+                e.target.style.display = 'none'; // Hide "Propose Meetup" button
+            }
+
+            if (e.target.classList.contains('submit-proposal-btn')) {
+                const time = document.getElementById(`meetup-time-${inquiryId}`).value;
+                const location = document.getElementById(`meetup-location-${inquiryId}`).value;
+
+                if (!time || !location) {
+                    alert("Please set a time and location.");
+                    return;
+                }
+                
+                // Convert local time to a standard ISO 8601 string
+                const proposedTime = new Date(time).toISOString();
+
+                e.target.textContent = "Sending...";
+                e.target.disabled = true;
+                try {
+                    await respondFunc({
+                        inquiryId: inquiryId,
+                        action: 'confirm',
+                        proposedTime: proposedTime,
+                        proposedLocation: location
+                    });
+                    renderInquiriesTab(auth, db, storage, containerElement); // Refresh list
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                    e.target.textContent = "Send Proposal";
+                    e.target.disabled = false;
+                }
+            }
+        });
+
+    } catch (error) {
+        console.error("Error fetching inquiries:", error);
+        listContainer.innerHTML = '<p class="error">Could not load inquiries.</p>';
+    }
+}
 
 // --- Card for the "My Reviews" tab ---
 const reviewCardHTML = (review) => {
@@ -1125,6 +1311,39 @@ async function showItemDetails(auth, db, storage, listingId) {
             document.getElementById('listings-section').style.display = 'none';
             // The updated itemDetailsHTML function is now called here
             appContent.innerHTML = itemDetailsHTML(listingData, isOwner, sellerRatingData);
+
+            const inquireBtn = document.getElementById('inquire-btn');
+            if (inquireBtn) {
+                // Check if an inquiry already exists
+                db.collection('inquiries')
+                    .where('listingId', '==', listingId)
+                    .where('buyerId', '==', currentUser.uid)
+                    .limit(1)
+                    .get()
+                    .then(snapshot => {
+                        if (!snapshot.empty) {
+                            inquireBtn.textContent = 'Inquiry Already Sent';
+                            inquireBtn.disabled = true;
+                        } else {
+                            // Add the click listener
+                            inquireBtn.addEventListener('click', async () => {
+                                inquireBtn.textContent = 'Sending...';
+                                inquireBtn.disabled = true;
+                                try {
+                                    const createInquiryFunc = firebase.functions().httpsCallable('createInquiry');
+                                    await createInquiryFunc({ listingId: listingId });
+                                    inquireBtn.textContent = 'Inquiry Sent!';
+                                    // No need to disable, it will be disabled on next page load by the check above
+                                } catch (error) {
+                                    console.error("Error creating inquiry:", error);
+                                    alert(`Error: ${error.message}`);
+                                    inquireBtn.textContent = 'Inquire Availability';
+                                    inquireBtn.disabled = false;
+                                }
+                            });
+                        }
+                    });
+            }
 
             const mainImage = document.getElementById('main-gallery-image');
             const thumbnails = document.querySelectorAll('.thumbnail-image');
