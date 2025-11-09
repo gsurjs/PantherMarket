@@ -1314,18 +1314,26 @@ async function showItemDetails(auth, db, storage, listingId) {
 
             const inquireBtn = document.getElementById('inquire-btn');
             if (inquireBtn) {
-                // Check if an inquiry already exists
+                // 1. Query ONLY by buyerId
                 db.collection('inquiries')
-                    .where('listingId', '==', listingId)
                     .where('buyerId', '==', currentUser.uid)
-                    .limit(1)
                     .get()
                     .then(snapshot => {
-                        if (!snapshot.empty) {
+                        
+                        // 2. Manually filter the results on the client
+                        let alreadyInquired = false;
+                        snapshot.forEach(doc => {
+                            if (doc.data().listingId === listingId) {
+                                alreadyInquired = true;
+                            }
+                        });
+
+                        // 3. Set up the button based on our client-side filter
+                        if (alreadyInquired) {
                             inquireBtn.textContent = 'Inquiry Already Sent';
                             inquireBtn.disabled = true;
                         } else {
-                            // Add the click listener
+                            // 4. Add the click listener
                             inquireBtn.addEventListener('click', async () => {
                                 inquireBtn.textContent = 'Sending...';
                                 inquireBtn.disabled = true;
@@ -1333,7 +1341,6 @@ async function showItemDetails(auth, db, storage, listingId) {
                                     const createInquiryFunc = firebase.functions().httpsCallable('createInquiry');
                                     await createInquiryFunc({ listingId: listingId });
                                     inquireBtn.textContent = 'Inquiry Sent!';
-                                    // No need to disable, it will be disabled on next page load by the check above
                                 } catch (error) {
                                     console.error("Error creating inquiry:", error);
                                     alert(`Error: ${error.message}`);
@@ -1342,6 +1349,11 @@ async function showItemDetails(auth, db, storage, listingId) {
                                 }
                             });
                         }
+                    })
+                    .catch(err => {
+                        console.error("Error checking for existing inquiry:", err);
+                        inquireBtn.textContent = "Inquiry Error";
+                        inquireBtn.disabled = true;
                     });
             }
 
