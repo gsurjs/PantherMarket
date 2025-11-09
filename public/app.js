@@ -2040,58 +2040,21 @@ function addAuthFormListeners(auth, db) {
             authErrorElement.textContent = '';
 
             try {
-                // --- 1. Check if a user doc with this email already exists ---
-                const emailToRegister = email.toLowerCase().trim();
-                const existingUserQuery = await db.collection('users').where("email", "==", emailToRegister).limit(1).get();
-                
-                let oldData = null;
-                let oldDocId = null;
-
-                if (!existingUserQuery.empty) {
-                    // We found an orphaned doc
-                    oldData = existingUserQuery.docs[0].data();
-                    oldDocId = existingUserQuery.docs[0].id;
-                    console.log(`Found orphaned data for ${emailToRegister} at doc ${oldDocId}`);
-                }
-                
-                // --- 2. Create the new auth user (this may fail if email is in use by a *live* auth user) ---
                 const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-                const newUid = userCredential.user.uid;
 
-                // --- 3. Send verification ---
+                // manually triggers init verification email upon registration
                 await userCredential.user.sendEmailVerification();
 
-                // --- 4. Decide what data to set ---
-                let dataToSet;
-                if (oldData) {
-                    // Use the old data
-                    dataToSet = {
-                        ...oldData,
-                        email: emailToRegister, // Ensure email is correct
-                    };
-                } else {
-                    // This is a brand new user, use default data
-                    dataToSet = {
-                        email: emailToRegister,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        isManuallyVerified: false
-                    };
-                }
-
-                // --- 5. Set the data at the NEW user's ID ---
-                await db.collection('users').doc(newUid).set(dataToSet);
-
-                // --- 6. Clean up the old doc (if it existed and is different) ---
-                if (oldDocId && oldDocId !== newUid) {
-                    await db.collection('users').doc(oldDocId).delete();
-                    console.log(`Cleaned up orphaned doc ${oldDocId}`);
-                }
+                // You can still create a user profile in Firestore
+                await db.collection('users').doc(userCredential.user.uid).set({
+                    email: email.toLowerCase().trim(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isManuallyVerified: false
+                });
                 
-                // The onAuthStateChanged listener will handle the rest
-
+                // The onAuthStateChanged listener will now automatically show the
+                // 'verifyEmailHTML' view for the new, unverified user.
             } catch (error) {
-                // This catch block will also handle "auth/email-already-in-use"
-                // if you forgot to delete the Auth user first.
                 authErrorElement.textContent = error.message;
             }
         });
