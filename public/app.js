@@ -2061,27 +2061,32 @@ function addAuthFormListeners(auth, db) {
                 // --- 3. Send verification ---
                 await userCredential.user.sendEmailVerification();
 
-                // --- 4. Decide what data to set ---
+                // --- 4. Prepare the user's data ---
+                const userData = {
+                    email: email.trim(),                // Store the original-cased email
+                    email_lowercase: emailToRegister,   // Store the normalized email for queries
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    isManuallyVerified: false
+                };
+
+                // --- 5. Decide what data to set ---
                 let dataToSet;
                 if (oldData) {
-                    // Use the old data
+                    // We found an old doc, merge its data
                     dataToSet = {
-                        ...oldData,
-                        email: emailToRegister, // Ensure email is correct
+                        ...oldData, // This brings in reviewCount, etc.
+                        ...userData, // This overwrites with the new, correct email fields
+                        createdAt: oldData.createdAt || userData.createdAt // Keep original creation date
                     };
                 } else {
-                    // This is a brand new user, use default data
-                    dataToSet = {
-                        email: emailToRegister,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                        isManuallyVerified: false
-                    };
+                    // This is a brand new user
+                    dataToSet = userData;
                 }
 
-                // --- 5. Set the data at the NEW user's ID ---
+                // --- 6. Set the data at the NEW user's ID ---
                 await db.collection('users').doc(newUid).set(dataToSet);
 
-                // --- 6. Clean up the old doc (if it existed and is different) ---
+                // --- 7. Clean up the old doc (if it existed and is different) ---
                 if (oldDocId && oldDocId !== newUid) {
                     await db.collection('users').doc(oldDocId).delete();
                     console.log(`Cleaned up orphaned doc ${oldDocId}`);
@@ -2091,7 +2096,6 @@ function addAuthFormListeners(auth, db) {
 
             } catch (error) {
                 // This catch block will also handle "auth/email-already-in-use"
-                // if you forgot to delete the Auth user first.
                 authErrorElement.textContent = error.message;
             }
         });
