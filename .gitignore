@@ -22,3 +22,7 @@ Thumbs.db
 # For editors like VS Code and WebStorm
 .vscode/
 .idea/
+
+# Firebase
+firebase-debug*.log
+firestore-debug*.log
