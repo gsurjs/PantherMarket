@@ -1019,6 +1019,15 @@ body.dark-mode #meetup-pin-code {
     color: #55c5ff; /* A light blue for dark mode */
 }
 
+body.dark-mode #forgot-password-link {
+    color: #55c5ff; /* Bright, readable blue for dark mode */
+    text-decoration: underline;
+}
+
+body.dark-mode #forgot-password-link:hover {
+    color: #80d4ff; /* Lighter blue on hover */
+}
+
 /* --- Dashboard Card ("My Listings" tab) --- */
 .my-listing-card {
     display: flex;
