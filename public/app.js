@@ -266,6 +266,7 @@ const userDashboardHTML = `
         <button id="tab-my-listings" class="dashboard-tab active">My Listings</button>
         <button id="tab-my-orders" class="dashboard-tab">My Orders</button>
         <button id="tab-my-reviews" class="dashboard-tab">My Reviews</button>
+        <button id="tab-inquiries" class="dashboard-tab">Inquiries</button>
         <button id="tab-payments" class="dashboard-tab">Payments</button>
     </div>
 
@@ -763,6 +764,8 @@ async function renderUserDashboard(auth, db, storage, defaultTab = 'my-listings'
                 renderMyReviews(auth, db, storage, dashboardContent);
             } else if (tab.id === 'tab-payments') { 
                 renderMyPaymentsTab(auth, db, dashboardContent);
+            } else if (tab.id === 'tab-inquiries') {
+                renderInquiriesTab(auth, db, storage, dashboardContent);
             }
         });
     });

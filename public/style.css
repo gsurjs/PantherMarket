@@ -217,6 +217,33 @@ header h3 {
     font-weight: 500;
 }
 
+.inquiry-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    margin-bottom: 1rem;
+}
+.inquiry-card h4 {
+    margin-top: 0;
+}
+.inquiry-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 0.5rem;
+}
+.proposal-form {
+    margin-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+    padding-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.proposal-form input, .proposal-form textarea {
+    width: 100%;
+}
+
 /* --- Main Content & Layout --- */
 main {
     max-width: 1200px;
@@ -1698,6 +1725,25 @@ body.dark-mode .drag-handle {
         margin-right: auto;
         transform: none;
         right: 0; /* Override the 'right: auto' from the other rule */
+    }
+    .inquiry-card {
+        padding: 1rem; /* Reduce padding on mobile */
+    }
+
+    .inquiry-actions {
+        flex-direction: column; /* Stack buttons vertically */
+        gap: 0.75rem;
+    }
+
+    .inquiry-actions .button,
+    .inquiry-actions button {
+        width: 100%; /* Make buttons full-width */
+        text-align: center;
+    }
+
+    .inquiry-actions a.button {
+        display: block;
+        box-sizing: border-box; 
     }
 }
 
