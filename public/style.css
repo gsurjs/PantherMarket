@@ -1483,6 +1483,13 @@ body.dark-mode .drag-handle {
     background: #2a2a2a;
     border-color: #3a3a3a;
 }
+.dark-mode .inquiry-card,
+.dark-mode .order-card,
+.dark-mode .review-card {
+    background-color: #333333; 
+    color: #f0f0f0;           
+    border: 1px solid #444444; 
+}
 
 /* --- Media Queries for Responsiveness --- */
 @media (max-width: 768px) {
@@ -1614,8 +1621,9 @@ body.dark-mode .drag-handle {
     .dashboard-nav-tabs {
         display: flex;
         flex-wrap: nowrap;
-        gap: 6px;
+        gap: 3px;
         margin-bottom: 1rem;
+        justify-content: center
     }
     
     /* Mobile - Image preview adjustments */
