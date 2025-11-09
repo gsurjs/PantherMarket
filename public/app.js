@@ -264,9 +264,9 @@ const userDashboardHTML = `
     </div>
 
     <div class="dashboard-nav-tabs">
-        <button id="tab-my-listings" class="dashboard-tab active">My Listings</button>
-        <button id="tab-my-orders" class="dashboard-tab">My Orders</button>
-        <button id="tab-my-reviews" class="dashboard-tab">My Reviews</button>
+        <button id="tab-my-listings" class="dashboard-tab active"><span>My</span><span>Listings</span></button>
+        <button id="tab-my-orders" class="dashboard-tab"><span>My</span><span>Orders</span></button>
+        <button id="tab-my-reviews" class="dashboard-tab"><span>My</span><span>Reviews</span></button>
         <button id="tab-inquiries" class="dashboard-tab">Inquiries</button>
         <button id="tab-payments" class="dashboard-tab">Payments</button>
     </div>
