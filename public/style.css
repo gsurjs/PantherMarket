@@ -935,6 +935,7 @@ form textarea {
     border-radius: 8px;
     font-weight: 500;
     cursor: pointer;
+    white-space: nowrap;
 }
 
 .dashboard-tab:hover {
@@ -1612,6 +1613,11 @@ body.dark-mode .drag-handle {
         flex: 0 0 auto;
         margin-right: 0;
     }
+    .dashboard-tab span {
+        display: block;
+        white-space: normal;
+        line-height: 1.3;
+    }
 
     .dashboard-profile-header {
         margin-bottom: 1rem;  /* Reduced from 2rem */
@@ -1621,7 +1627,7 @@ body.dark-mode .drag-handle {
     .dashboard-nav-tabs {
         display: flex;
         flex-wrap: nowrap;
-        gap: 3px;
+        gap: 1px;
         margin-bottom: 1rem;
         justify-content: center
     }
