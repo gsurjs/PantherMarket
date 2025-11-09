@@ -1627,7 +1627,7 @@ body.dark-mode .drag-handle {
     .dashboard-nav-tabs {
         display: flex;
         flex-wrap: nowrap;
-        gap: 3px;
+        gap: 6px;
         margin-bottom: 1rem;
         justify-content: center
     }
