@@ -1028,6 +1028,10 @@ body.dark-mode #forgot-password-link:hover {
     color: #80d4ff; /* Lighter blue on hover */
 }
 
+#forgot-password-link {
+    margin-top: 1rem;
+}
+
 /* --- Dashboard Card ("My Listings" tab) --- */
 .my-listing-card {
     display: flex;
