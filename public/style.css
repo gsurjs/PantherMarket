@@ -262,6 +262,8 @@ header h3 {
 
 /* Target ONLY the datetime input to add the icon */
 input[type="datetime-local"].proposal-input {
+    /* Safari fix */
+    width: -webkit-fill-available;
     /* Add padding-right to make space for the icon */
     padding-right: 40px; 
     
