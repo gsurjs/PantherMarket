@@ -387,6 +387,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">The buyer has accepted your meetup proposal!</p>
+                    <p><strong>Who:</strong> ${inquiry.buyerEmail}</p>
                     <p><strong>When:</strong> ${prettyTime}</p>
                     <p><strong>Where:</strong> ${proposal.location}</p>
                     <div class="inquiry-actions">
@@ -418,6 +419,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">You Accepted the Meetup!</p>
+                    <p><strong>Who:</strong> ${inquiry.sellerEmail}</p>
                     <p><strong>When:</strong> ${prettyTime}</p>
                     <p><strong>Where:</strong> ${proposal.location}</p>
                     <div class="inquiry-actions">
