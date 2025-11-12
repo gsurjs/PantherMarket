@@ -477,11 +477,13 @@ async function renderInquiriesTab(auth, db, storage, containerElement) {
                 const card = e.target.closest('.inquiry-card');
                 card.innerHTML += `
                     <div class="proposal-form">
-                        <label>Meetup Date & Time:</label>
-                        <input type="datetime-local" id="meetup-time-${inquiryId}" required>
-                        <label>Proposed Location:</label>
-                        <textarea id="meetup-location-${inquiryId}" placeholder="e.g., GSU Student Center, 1st floor"></textarea>
-                        <button class="submit-proposal-btn" data-id="${inquiryId}">Send Proposal</button>
+                        <label for="meetup-time-${inquiryId}">🗓️ Meetup Date & Time</label>
+                        <input type="datetime-local" class="proposal-input" id="meetup-time-${inquiryId}" required>
+                        
+                        <label for="meetup-location-${inquiryId}">📍 Proposed Location</label>
+                        <textarea class="proposal-input" id="meetup-location-${inquiryId}" placeholder="e.g., GSU Student Center, 1st floor"></textarea>
+                        
+                        <button class="submit-proposal-btn submit-button" data-id="${inquiryId}">Send Proposal</button>
                     </div>
                 `;
                 e.target.style.display = 'none'; // Hide "Propose Meetup" button

@@ -244,6 +244,49 @@ header h3 {
     width: 100%;
 }
 
+.proposal-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    color: #333;
+    box-sizing: border-box; 
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: calc(100% - 12px) center;
+}
+
+/* Target ONLY the datetime input to add the icon */
+input[type="datetime-local"].proposal-input {
+    /* Add padding-right to make space for the icon */
+    padding-right: 40px; 
+    
+    /* Point to the new file, fixing adblock bug */
+    background-image: url('/assets/calendar-light.svg'); 
+    
+    background-size: 16px 16px; /* Icon size */
+}
+
+/* Hide the browser's default calendar icon */
+input[type="datetime-local"].proposal-input::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    width: 100%; /* Make our tap target the whole input */
+    cursor: pointer;
+}
+
+.dark-mode .proposal-input {
+    background-color: #333;
+    color: #f0f0f0;
+    border-color: #555;
+}
+
+/* Make the SVG icon white in dark mode */
+.dark-mode input[type="datetime-local"].proposal-input {
+    background-image: url('/assets/calendar-dark.svg'); /* pointing to file to navigate ad blocker bug */
+}
+
 /* --- Main Content & Layout --- */
 main {
     max-width: 1200px;
