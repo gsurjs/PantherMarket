@@ -360,51 +360,55 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'seller_denied':
                 cardContent = `<p>You denied this inquiry.</p>`;
                 break;
-            // Add more cases here (e.g., 'buyer_accepted')
+            case 'buyer_accepted':
+                cardContent = `<p class="success">The buyer has accepted your meetup proposal!</p>`;
+                break;
             default:
                 cardContent = `<p>Status: ${inquiry.status}</p>`;
         }
     } else {
+        const proposal = inquiry.meetupProposal;
+        const prettyTime = new Date(proposal?.time).toLocaleString('en-US', { 
+            dateStyle: 'medium', 
+            timeStyle: 'short' 
+        });
+        const icsTime = new Date(proposal?.time).toISOString().replace(/-|:|\.\d+/g, '');
+        const icsContent = [
+            "BEGIN:VCALENDAR", "VERSION:2.0", "BEGIN:VEVENT",
+            `SUMMARY:PantherMarket Meetup: ${inquiry.listingTitle}`,
+            `LOCATION:${proposal?.location}`,
+            `DTSTART:${icsTime}`,
+            `DTEND:${new Date(new Date(proposal?.time).getTime() + 60*60*1000).toISOString().replace(/-|:|\.\d+/g, '')}`,
+            "END:VEVENT", "END:VCALENDAR"
+        ].join('\n');
+        const calendarLink = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsContent);
         // buyer's view
         switch (inquiry.status) {
             case 'pending_seller_response':
                 cardContent = `<p>Waiting for seller to respond...</p>`;
                 break;
             case 'seller_confirmed':
-                const proposal = inquiry.meetupProposal;
-                // Format the time for display. new Date() can parse the ISO string.
-                const prettyTime = new Date(proposal.time).toLocaleString('en-US', { 
-                    dateStyle: 'medium', 
-                    timeStyle: 'short' 
-                });
-                
-                // --- CALENDAR LINK ---
-                // Format for .ics file (YYYYMMDDTHHmmSSZ)
-                const icsTime = new Date(proposal.time).toISOString().replace(/-|:|\.\d+/g, '');
-
-                const icsContent = [
-                    "BEGIN:VCALENDAR", "VERSION:2.0", "BEGIN:VEVENT",
-                    `SUMMARY:PantherMarket Meetup: ${inquiry.listingTitle}`,
-                    `LOCATION:${proposal.location}`,
-                    `DTSTART:${icsTime}`,
-                    // Simple 1-hour duration for the calendar event
-                    `DTEND:${new Date(new Date(proposal.time).getTime() + 60*60*1000).toISOString().replace(/-|:|\.\d+/g, '')}`,
-                    "END:VEVENT", "END:VCALENDAR"
-                ].join('\n');
-                
-                const calendarLink = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsContent);
-
                 cardContent = `
                     <p class="success">Seller has proposed a meetup!</p>
+                    <p><strong>When:</strong> ${prettyTime}</p>
+                    <p><strong>Where:</strong> ${proposal.location}</p>
+                    <div class="inquiry-actions">
+                        <button class="inquiry-accept-btn" data-id="${inquiry.id}">Confirm Meetup</button>
+                    </div>
+                `;
+                break;
+            case 'seller_denied':
+                cardContent = `<p class="error">The seller is not available or the item is sold.</p>`;
+                break;
+            case 'buyer_accepted':
+                cardContent = `
+                    <p class="success">Buyer accepted Meetup!</p>
                     <p><strong>When:</strong> ${prettyTime}</p>
                     <p><strong>Where:</strong> ${proposal.location}</p>
                     <div class="inquiry-actions">
                         <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
                     </div>
                 `;
-                break;
-            case 'seller_denied':
-                cardContent = `<p class="error">The seller is not available or the item is sold.</p>`;
                 break;
             default:
                 cardContent = `<p>Status: ${inquiry.status}</p>`;
@@ -468,6 +472,22 @@ async function renderInquiriesTab(auth, db, storage, containerElement) {
                 } catch (error) {
                     alert(`Error: ${error.message}`);
                     e.target.textContent = "Deny";
+                    e.target.disabled = false;
+                }
+            }
+            if (e.target.classList.contains('inquiry-accept-btn')) {
+                if (!confirm("Are you sure you want to confirm this meetup time and location?")) return;
+                
+                const acceptFunc = firebase.functions().httpsCallable('acceptMeetup');
+                e.target.textContent = "Confirming...";
+                e.target.disabled = true;
+                try {
+                    await acceptFunc({ inquiryId: inquiryId });
+                    // Refresh the whole tab to show the new "buyer_accepted" state
+                    renderInquiriesTab(auth, db, storage, containerElement); 
+                } catch (error) {
+                    alert(`Error: ${error.message}`);
+                    e.target.textContent = "Confirm Meetup";
                     e.target.disabled = false;
                 }
             }
