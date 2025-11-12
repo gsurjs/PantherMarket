@@ -244,6 +244,48 @@ header h3 {
     width: 100%;
 }
 
+.proposal-input {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    color: #333;
+    box-sizing: border-box; 
+    cursor: pointer;
+    background-repeat: no-repeat;
+    background-position: calc(100% - 12px) center;
+}
+
+/* Target ONLY the datetime input to add the icon */
+input[type="datetime-local"].proposal-input {
+    /* Add padding-right to make space for the icon */
+    padding-right: 40px; 
+    
+    /* Add the calendar icon (SVG) */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-calendar' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z'/%3E%3C/svg%3E");
+    background-size: 16px 16px; /* Icon size */
+}
+
+/* Hide the browser's default calendar icon */
+input[type="datetime-local"].proposal-input::-webkit-calendar-picker-indicator {
+    opacity: 0;
+    width: 100%; /* Make our tap target the whole input */
+    cursor: pointer;
+}
+
+.dark-mode .proposal-input {
+    background-color: #333;
+    color: #f0f0f0;
+    border-color: #555;
+}
+
+/* Make the SVG icon white in dark mode */
+.dark-mode input[type="datetime-local"].proposal-input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-calendar' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z'/%3E%3C/svg%3E");
+}
+
 /* --- Main Content & Layout --- */
 main {
     max-width: 1200px;
