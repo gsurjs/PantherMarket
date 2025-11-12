@@ -2409,6 +2409,7 @@ function setupNotificationListener(auth, db, storage) {
         try {
             const snapshot = await db.collection('notifications')
                 .where('userId', '==', user.uid)
+                .orderBy('createdAt', 'desc')
                 .limit(10)
                 .get();
 
@@ -2467,7 +2468,7 @@ function setupNotificationListener(auth, db, storage) {
             dropdown.style.display = 'none';
         } else {
             dropdown.style.display = 'block';
-            loadNotifications();
+            await loadNotifications();
             markNotificationsAsRead();
         }
     });
