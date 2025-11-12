@@ -385,7 +385,14 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                 cardContent = `<p>You denied this inquiry.</p>`;
                 break;
             case 'buyer_accepted':
-                cardContent = `<p class="success">The buyer has accepted your meetup proposal!</p>`;
+                cardContent = `
+                    <p class="success">The buyer has accepted your meetup proposal!</p>
+                    <p><strong>When:</strong> ${prettyTime}</p>
+                    <p><strong>Where:</strong> ${proposal.location}</p>
+                    <div class="inquiry-actions">
+                        <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
+                    </div>
+                `;
                 break;
             default:
                 cardContent = `<p>Status: ${inquiry.status}</p>`;
@@ -410,7 +417,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                 break;
             case 'buyer_accepted':
                 cardContent = `
-                    <p class="success">Buyer accepted Meetup!</p>
+                    <p class="success">You Accepted the Meetup!</p>
                     <p><strong>When:</strong> ${prettyTime}</p>
                     <p><strong>Where:</strong> ${proposal.location}</p>
                     <div class="inquiry-actions">
