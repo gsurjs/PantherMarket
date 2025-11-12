@@ -263,8 +263,9 @@ input[type="datetime-local"].proposal-input {
     /* Add padding-right to make space for the icon */
     padding-right: 40px; 
     
-    /* Add the calendar icon (SVG) */
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='currentColor' class='bi bi-calendar' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z'/%3E%3C/svg%3E");
+    /* Point to the new file, fixing adblock bug */
+    background-image: url('/assets/calendar-light.svg'); 
+    
     background-size: 16px 16px; /* Icon size */
 }
 
@@ -283,7 +284,7 @@ input[type="datetime-local"].proposal-input::-webkit-calendar-picker-indicator {
 
 /* Make the SVG icon white in dark mode */
 .dark-mode input[type="datetime-local"].proposal-input {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='white' class='bi bi-calendar' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z'/%3E%3C/svg%3E");
+    background-image: url('/assets/calendar-dark.svg'); /* pointing to file to navigate ad blocker bug */
 }
 
 /* --- Main Content & Layout --- */
