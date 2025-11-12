@@ -2461,7 +2461,7 @@ function setupNotificationListener(auth, db, storage) {
     }
 
     // 4. Handle clicks on the bell
-    bellBtn.addEventListener('click', (e) => {
+    bellBtn.addEventListener('click', async (e) => {
         e.stopPropagation();
         const isVisible = dropdown.style.display === 'block';
         if (isVisible) {
