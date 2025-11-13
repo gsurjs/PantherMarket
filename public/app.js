@@ -380,7 +380,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
 
     if (inquiry.status === 'buyer_accepted') {
         escortButtonHTML = `
-            <div class="escort-button-container top">
+            <div class="escort-button-container">
                 <button class="escort-button" title="Call GSU Safety Escort">Call Safety Escort</button>
             </div>
         `;
@@ -407,7 +407,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">The buyer has accepted your meetup proposal!</p>
-                    <div class="meetup-details-container">
+                    ${escortButtonHTML} <div class="meetup-details-container">
                         <div class="meetup-info">
                             <p><strong>Who:</strong> ${inquiry.buyerEmail}</p>
                             <p><strong>When:</strong> ${prettyTime}</p>
@@ -443,7 +443,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">You Accepted the Meetup!</p>
-                    <div class="meetup-details-container">
+                    ${escortButtonHTML} <div class="meetup-details-container">
                         <div class="meetup-info">
                             <p><strong>Who:</strong> ${inquiry.sellerEmail}</p>
                             <p><strong>When:</strong> ${prettyTime}</p>
@@ -462,7 +462,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
 
     return `
         <div class="inquiry-card" data-id="${inquiry.id}">
-            ${escortButtonHTML} <h4>${inquiry.listingTitle}</h4>
+            <h4>${inquiry.listingTitle}</h4>
             ${cardContent}
         </div>
     `;
