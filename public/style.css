@@ -217,6 +217,45 @@ header h3 {
     font-weight: 500;
 }
 
+#notification-list-content {
+    max-height: 400px; 
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: auto;  
+    -ms-overflow-style: auto;
+}
+
+#notification-list-content::-webkit-scrollbar {
+    display: block; 
+    width: 8px;
+}
+
+#notification-list-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#notification-list-content::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+#notification-list-content::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+.dark-mode #notification-list-content::-webkit-scrollbar-track {
+    background: #333; 
+}
+
+.dark-mode #notification-list-content::-webkit-scrollbar-thumb {
+    background: #666;
+}
+
+.dark-mode #notification-list-content::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}
+
 .inquiry-card {
     background: white;
     border-radius: 8px;
