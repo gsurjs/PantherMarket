@@ -741,7 +741,6 @@ form textarea {
 }
 
 .escort-button {
-    width: 100%;
     text-align: center;
     display: block;
     box-sizing: border-box;
@@ -815,6 +814,8 @@ form textarea {
     .escort-button {
         font-size: 0.8rem; /* Keep it small */
         padding: 0.5rem 0.75rem;
+        width: 100%;
+        text-align: center;
     }
 }
 
