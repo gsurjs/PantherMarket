@@ -1826,6 +1826,11 @@ body.dark-mode .drag-handle {
         transform: none;
         right: 0; /* Override the 'right: auto' from the other rule */
     }
+
+    #notification-list-content {
+        max-height: calc(100vh - 200px);
+    }
+
     .inquiry-card {
         padding: 1rem; /* Reduce padding on mobile */
     }
