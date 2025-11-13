@@ -179,6 +179,8 @@ header h3 {
     top: calc(100% + 10px); /* Position below the bell */
     right: 0;
     width: 320px;
+    max-height: 400px;
+    overflow-y: auto;
     background: white;
     color: #333;
     border-radius: 8px;
@@ -213,6 +215,14 @@ header h3 {
 .notification-item.is-unread {
     background-color: #f0f5ff; /* Light blue */
     font-weight: 500;
+}
+
+#notification-list-content {
+    max-height: 400px; 
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: auto;  
+    -ms-overflow-style: auto;
 }
 
 #notification-list-content::-webkit-scrollbar {
@@ -1805,6 +1815,8 @@ body.dark-mode .drag-handle {
         position: fixed;   /* Anchor to viewport */
         top: 150px;         /* Sit just below header */
         z-index: 101;      
+
+        /* --- New Centering Logic --- */
         width: 95vw;
         max-width: 400px;
         left: 0;
@@ -1813,9 +1825,6 @@ body.dark-mode .drag-handle {
         margin-right: auto;
         transform: none;
         right: 0; /* Override the 'right: auto' from the other rule */
-        bottom: 20px; /* Gives it a fixed height */
-        overflow-y: auto; /* Makes this container scroll */
-        -webkit-overflow-scrolling: touch; /* Enables native iOS scroll */
     }
     .inquiry-card {
         padding: 1rem; /* Reduce padding on mobile */
