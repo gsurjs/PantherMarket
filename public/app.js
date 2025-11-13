@@ -261,6 +261,17 @@ const userDashboardHTML = `
                 </div>
             <span id="user-review-count">(No reviews yet)</span>
         </div>
+    <div id="escort-modal-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content escort-modal-content">
+            <h3>Call GSU Safety Escort?</h3>
+            <p>This will contact the Safety Escort service at (404) 413-2100.</p>
+            <div class="escort-modal-actions">
+                <button id="escort-confirm-yes" class="escort-yes-btn">Yes, Call</button>
+                <button id="escort-confirm-no" class="escort-no-btn">No</button>
+            </div>
+        </div>
+    </div>
+
     </div>
 
     <div class="dashboard-nav-tabs">
@@ -341,6 +352,7 @@ const createReviewHTML = (listingTitle) => `
 const inquiryCardHTML = (inquiry, currentUserId) => {
     const isSeller = inquiry.sellerId === currentUserId;
     let cardContent = '';
+    let escortButtonHTML = '';
 
     let prettyTime = '';
     let calendarLink = '';
@@ -366,6 +378,14 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
         calendarLink = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsContent);
     }
 
+    if (inquiry.status === 'buyer_accepted') {
+        escortButtonHTML = `
+            <div class="escort-button-container">
+                <button class="escort-button" title="Call GSU Safety Escort">Call Safety Escort</button>
+            </div>
+        `;
+    }
+
     if (isSeller) {
         // Seller's view
         switch (inquiry.status) {
@@ -387,9 +407,13 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">The buyer has accepted your meetup proposal!</p>
-                    <p><strong>Who:</strong> ${inquiry.buyerEmail}</p>
-                    <p><strong>When:</strong> ${prettyTime}</p>
-                    <p><strong>Where:</strong> ${proposal.location}</p>
+                    ${escortButtonHTML} <div class="meetup-details-container">
+                        <div class="meetup-info">
+                            <p><strong>Who:</strong> ${inquiry.buyerEmail}</p>
+                            <p><strong>When:</strong> ${prettyTime}</p>
+                            <p><strong>Where:</strong> ${proposal.location}</p>
+                        </div>
+                    </div>
                     <div class="inquiry-actions">
                         <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
                     </div>
@@ -419,9 +443,13 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">You Accepted the Meetup!</p>
-                    <p><strong>Who:</strong> ${inquiry.sellerEmail}</p>
-                    <p><strong>When:</strong> ${prettyTime}</p>
-                    <p><strong>Where:</strong> ${proposal.location}</p>
+                    ${escortButtonHTML} <div class="meetup-details-container">
+                        <div class="meetup-info">
+                            <p><strong>Who:</strong> ${inquiry.sellerEmail}</p>
+                            <p><strong>When:</strong> ${prettyTime}</p>
+                            <p><strong>Where:</strong> ${proposal.location}</p>
+                        </div>
+                    </div>
                     <div class="inquiry-actions">
                         <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
                     </div>
@@ -553,6 +581,10 @@ async function renderInquiriesTab(auth, db, storage, containerElement) {
                     e.target.textContent = "Send Proposal";
                     e.target.disabled = false;
                 }
+            }
+            if (e.target.classList.contains('escort-button')) {
+                e.preventDefault(); // Stop any other actions
+                document.getElementById('escort-modal-overlay').style.display = 'flex';
             }
         });
 
@@ -940,6 +972,30 @@ async function renderUserDashboard(auth, db, storage, defaultTab = 'my-listings'
 
     sessionStorage.setItem('currentView', 'dashboard');
     appContent.innerHTML = userDashboardHTML;
+
+    const escortModal = document.getElementById('escort-modal-overlay');
+    if (escortModal) { // Check if modal exists
+        const escortYes = document.getElementById('escort-confirm-yes');
+        const escortNo = document.getElementById('escort-confirm-no');
+        
+        escortNo.addEventListener('click', () => {
+            escortModal.style.display = 'none';
+        });
+        
+        escortYes.addEventListener('click', () => {
+            window.location.href = 'tel:404-413-2100'; // <-- New Number
+            escortModal.style.display = 'none';
+        });
+        
+        // Also close if clicking overlay
+        escortModal.addEventListener('click', (e) => {
+            if (e.target === escortModal) {
+                escortModal.style.display = 'none';
+            }
+        });
+    }
+
+
     listingsSection.style.display = 'none'; // Hide main listings
     
     // Find the empty container

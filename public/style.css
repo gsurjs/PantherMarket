@@ -717,6 +717,108 @@ form textarea {
     margin-top: 13px;
 }
 
+.meetup-details-container {
+    display: flex;
+    justify-content: space-between; /* Pushes info and button apart */
+    align-items: flex-start; /* Aligns them to the top */
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f0f0;
+}
+
+.meetup-info {
+    flex-grow: 1; /* Takes up available space */
+}
+
+.meetup-info p {
+    margin: 0.25rem 0;
+}
+
+.escort-button-container {
+    margin-top: 0.5rem;
+    margin-bottom: 13px;
+}
+
+.escort-button {
+    text-align: center;
+    display: block;
+    box-sizing: border-box;
+
+    background-color: #007bff; /* Blue */
+    color: white;
+    font-weight: 600;
+    font-size: 1rem; /* Match other buttons */
+    border: none;
+    border-radius: 8px; /* Rounded rectangle */
+    height: auto; 
+    padding: 0.75rem 1.5rem; /* Match other buttons */
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+    transition: all 0.2s ease;
+}
+
+.escort-button:hover {
+    background-color: #0056b3; /* Darker blue */
+    transform: scale(1.05); /* Slight pulse */
+    box-shadow: 0 6px 16px rgba(0, 123, 255, 0.4);
+}
+
+/* --- Escort Modal Specifics --- */
+.escort-modal-content {
+    text-align: center;
+    border-top: 5px solid #007bff; /* Blue */
+}
+
+.escort-modal-content h3 {
+    color: #007bff; /* Blue */
+}
+
+.escort-modal-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.escort-modal-actions button {
+    flex: 1; /* Make buttons share space */
+    font-size: 1.1rem;
+    padding: 0.75rem;
+}
+
+.escort-yes-btn {
+    background-color: #007bff; /* Blue */
+}
+.escort-yes-btn:hover {
+    background-color: #0056b3;
+}
+
+.escort-no-btn {
+    background-color: #6c757d; /* Grey */
+}
+.escort-no-btn:hover {
+    background-color: #5a6268;
+}
+
+/* --- Dark Mode --- */
+.dark-mode .meetup-details-container {
+    border-top-color: #444;
+}
+
+.dark-mode .escort-modal-content {
+    border-top-color: #007bff; /* Blue */
+}
+
+/* --- Mobile --- */
+@media (max-width: 768px) {
+    .escort-button {
+        font-size: 0.8rem; /* Keep it small */
+        padding: 0.5rem 0.75rem;
+        width: 100%;
+        text-align: center;
+    }
+}
+
 /* --- Image Upload Preview with Drag & Drop --- */
 #image-preview-container {
     display: flex;
@@ -1857,6 +1959,7 @@ body.dark-mode .drag-handle {
         display: block;
         box-sizing: border-box; 
     }
+
 }
 
 @media (max-width: 400px) {
