@@ -1953,6 +1953,21 @@ body.dark-mode .drag-handle {
         display: block;
         box-sizing: border-box; 
     }
+    .escort-button {
+        padding: 0.5rem 0.5rem; /* Tighter padding */
+        font-size: 0.75rem;     /* Slightly smaller font */
+    }
+
+    .meetup-info p {
+        display: flex; /* Aligns <strong> and text on a row */
+    }
+
+    .meetup-info p strong {
+        width: 65px;      /* Gives "Who:", "When:" a fixed width */
+        flex-shrink: 0;   /* Prevents it from shrinking */
+        margin-right: 5px; /* Adds space before the text */
+    }
+
 }
 
 @media (max-width: 400px) {
