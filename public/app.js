@@ -462,7 +462,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
 
     return `
         <div class="inquiry-card" data-id="${inquiry.id}">
-            <h4>${inquiry.listingTitle}</h4>
+            ${escortButtonHTML} <h4>${inquiry.listingTitle}</h4>
             ${cardContent}
         </div>
     `;
