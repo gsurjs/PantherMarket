@@ -352,6 +352,7 @@ const createReviewHTML = (listingTitle) => `
 const inquiryCardHTML = (inquiry, currentUserId) => {
     const isSeller = inquiry.sellerId === currentUserId;
     let cardContent = '';
+    let ecortButtonHTML = '';
 
     let prettyTime = '';
     let calendarLink = '';
@@ -375,6 +376,14 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             "END:VEVENT", "END:VCALENDAR"
         ].join('\n');
         calendarLink = "data:text/calendar;charset=utf-8," + encodeURIComponent(icsContent);
+    }
+
+    if (inquiry.status === 'buyer_accepted') {
+        escortButtonHTML = `
+            <div class="escort-button-container top">
+                <button class="escort-button" title="Call GSU Safety Escort">Call Safety Escort</button>
+            </div>
+        `;
     }
 
     if (isSeller) {
@@ -403,9 +412,6 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                             <p><strong>Who:</strong> ${inquiry.buyerEmail}</p>
                             <p><strong>When:</strong> ${prettyTime}</p>
                             <p><strong>Where:</strong> ${proposal.location}</p>
-                        </div>
-                        <div class="escort-button-container">
-                            <button class="escort-button" title="Call GSU Safety Escort">Call Escort</button>
                         </div>
                     </div>
                     <div class="inquiry-actions">
@@ -442,9 +448,6 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                             <p><strong>Who:</strong> ${inquiry.sellerEmail}</p>
                             <p><strong>When:</strong> ${prettyTime}</p>
                             <p><strong>Where:</strong> ${proposal.location}</p>
-                        </div>
-                        <div class="escort-button-container">
-                            <button class="escort-button" title="Call GSU Safety Escort">Call Escort</button>
                         </div>
                     </div>
                     <div class="inquiry-actions">

@@ -736,19 +736,23 @@ form textarea {
 }
 
 .escort-button-container {
-    flex-shrink: 0; /* Prevents button from shrinking */
+    margin-bottom: 13px;
 }
 
 .escort-button {
+    width: 100%;
+    text-align: center;
+    display: block;
+    box-sizing: border-box;
+
     background-color: #007bff; /* Blue */
     color: white;
     font-weight: 600;
-    font-size: 0.8rem; /* Smaller font for more text */
+    font-size: 1rem; /* Match other buttons */
     border: none;
     border-radius: 8px; /* Rounded rectangle */
-    width: auto; /* Auto width */
-    height: auto; /* Auto height */
-    padding: 0.5rem 0.75rem; /* Padding for text */
+    height: auto; 
+    padding: 0.75rem 1.5rem; /* Match other buttons */
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
     transition: all 0.2s ease;
@@ -1952,16 +1956,6 @@ body.dark-mode .drag-handle {
     .inquiry-actions a.button {
         display: block;
         box-sizing: border-box; 
-    }
-    .escort-button {
-        padding: 0.5rem 0.5rem; /* Tighter padding */
-        font-size: 0.75rem;     /* Slightly smaller font */
-    }
-
-    .meetup-info p strong {
-        display: inline-block; /* Makes it a block, but respects text flow */
-        width: 65px;           /* Gives "Who:", "When:" a fixed width */
-        margin-right: 5px;     /* Adds space before the text */
     }
 
 }
