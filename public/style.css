@@ -712,6 +712,10 @@ form textarea {
     margin: 0;
 }
 
+#meetup-prompt-container {
+    margin-top: 1rem;
+}
+
 /* --- Image Upload Preview with Drag & Drop --- */
 #image-preview-container {
     display: flex;
