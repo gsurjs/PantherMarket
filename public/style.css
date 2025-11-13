@@ -179,8 +179,6 @@ header h3 {
     top: calc(100% + 10px); /* Position below the bell */
     right: 0;
     width: 320px;
-    max-height: 400px;
-    overflow-y: auto;
     background: white;
     color: #333;
     border-radius: 8px;
@@ -1815,8 +1813,6 @@ body.dark-mode .drag-handle {
         position: fixed;   /* Anchor to viewport */
         top: 150px;         /* Sit just below header */
         z-index: 101;      
-
-        /* --- New Centering Logic --- */
         width: 95vw;
         max-width: 400px;
         left: 0;
