@@ -352,7 +352,7 @@ const createReviewHTML = (listingTitle) => `
 const inquiryCardHTML = (inquiry, currentUserId) => {
     const isSeller = inquiry.sellerId === currentUserId;
     let cardContent = '';
-    let ecortButtonHTML = '';
+    let escortButtonHTML = '';
 
     let prettyTime = '';
     let calendarLink = '';
