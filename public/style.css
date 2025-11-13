@@ -713,7 +713,7 @@ form textarea {
 }
 
 #meetup-prompt-container {
-    margin-top: 1rem;
+    margin-top: 13px;
 }
 
 /* --- Image Upload Preview with Drag & Drop --- */
@@ -1590,6 +1590,8 @@ body.dark-mode .drag-handle {
 
     header {
         padding: 1rem 0.5rem;
+        transform: translateZ(0);
+        backface-visibility: hidden;
     }
 
     header h1 {
