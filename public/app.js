@@ -613,6 +613,22 @@ async function initializeApp() {
         const db = firebase.firestore();
         const storage = firebase.storage();
 
+        // This makes the logo container a "home" button.
+        const logoContainer = document.getElementById('logo-container');
+        if (logoContainer) {
+            logoContainer.addEventListener('click', () => {
+                // Find the existing "Home" or "Login" link and click it
+                const homeLink = document.getElementById('home-link');
+                const loginLink = document.getElementById('login-link');
+
+                if (homeLink) {
+                    homeLink.click(); // Clicks the "Home" link for logged-in users
+                } else if (loginLink) {
+                    loginLink.click(); // Clicks the "Login" link for logged-out users
+                }
+            });
+        }
+
         // Now that Firebase is initialized, set up the auth listener
         setupAuthListener(auth, db, storage);
         loadAllListings(auth, db, storage);
