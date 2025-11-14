@@ -6,6 +6,24 @@ const listingsSection = document.getElementById('listings-section');
 //--STRIPE INIT-- public key
 const stripe = Stripe('pk_test_51SPblu2OqbuQAGApTQPlL3E3Fd6EPtlRSGDEKLB7XvGvG99wfirECHxW1VrF8WwBy4ql9sfNvKN81zpAbNLeY1lw007msYTFRh');
 
+/**
+ * Sanitizes a string to prevent XSS attacks before rendering with .innerHTML
+ * @param {string} str The string to sanitize
+ * @returns {string} The HTML-safe string
+ */
+
+function sanitizeHTML(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, function(m) { 
+        return {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[m];
+    });
+}
 
 // --- HTML TEMPLATES ---
 const mainListingsSectionHTML = `
@@ -48,7 +66,7 @@ const registrationSuccessHTML = `
 // unverified user template that shows if user isn't verified
 const verifyEmailHTML = (email) => `
     <h2>Verify Your Email</h2>
-    <p>A verification link was sent to <strong>${email}</strong>.</p>
+    <p>A verification link was sent to <strong>${sanitizeHTML(email)}</strong>.</p>
     <p>Please check your inbox and click the link to activate your account. Once verified, you may need to refresh this page.</p>
     <button id="resend-verification-button">Resend Verification Email</button>
     <p id="resend-message" class="error" style="color: green;"></p>
@@ -56,7 +74,7 @@ const verifyEmailHTML = (email) => `
 
 const welcomeHTML = (user) => `
     <h2>Welcome!</h2>
-    <p>You are logged in as ${user.email}.</p>
+    <p>You are logged in as ${sanitizeHTML(user.email)}.</p>
     <button id="create-listing-btn">Create a New Listing</button>
 `;
 
@@ -109,11 +127,11 @@ const listingCardHTML = (listing, id) => {
     }
 
     return `
-    <div class="listing-card" data-id="${id}">
-        <img src="${imageUrl}" alt="${listing.title}">
+    <div class="listing-card" data-id="${sanitizeHTML(id)}">
+        <img src="${imageUrl}" alt="${sanitizeHTML(listing.title)}">
         <div class="listing-card-info">
-            <h3>${listing.title}</h3>
-            <p>$${listing.price} ${listing.isTrade ? '<span class="trade-badge">🔄 Trade</span>' : ''}</p>
+            <h3>${sanitizeHTML(listing.title)}</h3>
+            <p>$${sanitizeHTML(listing.price)} ${listing.isTrade ? '<span class="trade-badge">🔄 Trade</span>' : ''}</p>
             <button class="view-details-btn">View Details</button>
         </div>
     </div>
@@ -135,10 +153,10 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
     return `
     <div class="item-details">
         <button id="back-to-listings-btn">&larr; Back to Listings</button>
-        <h2>${listing.title}</h2>
+        <h2>${sanitizeHTML(listing.title)}</h2>
         <div class="image-gallery">
             <div class="main-image-container">
-                <img id="main-gallery-image" src="${images[0]}" alt="${listing.title}">
+                <img id="main-gallery-image" src="${images[0]}" alt="${sanitizeHTML(listing.title)}">
             </div>
             
             ${images.length > 1 ? `
@@ -150,10 +168,10 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
             ` : ''}
         </div>
         
-        <p class="price">$${listing.price}</p>
+        <p class="price">$${sanitizeHTML(listing.price)}</p>
         ${listing.isTrade ? `<p class="trade-info">🔄 This seller is open to trades.</p>` : ''}
-        <p class="description">${listing.description}</p>
-        <p class="seller">Seller: ${listing.sellerEmail}</p>
+        <p class="description">${sanitizeHTML(listing.description)}</p>
+        <p class="seller">Seller: ${sanitizeHTML(listing.sellerEmail)}</p>
         ${sellerRating.count > 0 ? `
             <div class="item-details-rating">
                 ${[...Array(5)].map((_, i) => `
@@ -209,7 +227,7 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
             </div>
 
             <div id="payment-container" style="display: none;">
-                <button id="pay-with-stripe-btn" class="submit-button">Pay $${listing.price} with Stripe</button>
+                <button id="pay-with-stripe-btn" class="submit-button">Pay $${sanitizeHTML(listing.price)} with Stripe</button>
                 <p class="small-text">Note: You must still meet the seller to pick up your item.</p>
             </div>
         </div>
@@ -217,7 +235,7 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
         <div id="reviews-modal" class="modal-overlay" style="display: none;">
             <div class="modal-content">
                 <button type="button" class="modal-close-btn">&times;</button>
-                <h3>Reviews for ${listing.sellerEmail}</h3>
+                <h3>Reviews for ${sanitizeHTML(listing.sellerEmail)}</h3>
                 <div id="reviews-modal-list" class="reviews-modal-list">
                     </div>
             </div>
@@ -229,9 +247,9 @@ const itemDetailsHTML = (listing, isOwner, sellerRating = { avg: 0, count: 0 }) 
 const editListingHTML = (listing) => `
     <h2>Edit Listing</h2>
     <form id="edit-listing-form">
-        <input type="text" id="listing-title" value="${listing.title}" required>
-        <textarea id="listing-desc" required>${listing.description}</textarea>
-        <input type="number" id="listing-price" value="${listing.price}" step="0.01" required>
+        <input type="text" id="listing-title" value="${sanitizeHTML(listing.title)}" required>
+        <textarea id="listing-desc" required>${sanitizeHTML(listing.description)}</textarea>
+        <input type="number" id="listing-price" value="${sanitizeHTML(listing.price)}" step="0.01" required>
 
         <div class="form-check">
             <input type="checkbox" id="listing-trade" ${listing.isTrade ? 'checked' : ''}>
@@ -292,11 +310,11 @@ const myListingCardHTML = (listing, id) => {
     }
 
     return `
-    <div class="listing-card my-listing-card" data-id="${id}" data-status="${listing.status}">
-        <img src="${imageUrl}" alt="${listing.title}">
+    <div class="listing-card my-listing-card" data-id="${sanitizeHTML(id)}" data-status="${sanitizeHTML(listing.status)}">
+        <img src="${imageUrl}" alt="${sanitizeHTML(listing.title)}">
         <div class="listing-card-info">
-            <h3>${listing.title}</h3>
-            <p>$${listing.price} ${listing.isTrade ? '<span class="trade-badge">🔄 Trade</span>' : ''}</p>
+            <h3>${sanitizeHTML(listing.title)}</h3>
+            <p>$${sanitizeHTML(listing.price)} ${listing.isTrade ? '<span class="trade-badge">🔄 Trade</span>' : ''}</p>
         </div>
         <div class="my-listing-card-actions">
             ${listing.status === 'active' ? 
@@ -311,17 +329,17 @@ const myListingCardHTML = (listing, id) => {
 
 // --- Card for the "My Orders" tab ---
 const orderCardHTML = (order, id) => `
-    <div class="order-card" data-id="${id}">
-    <img src="${order.listingThumbnail || 'https://via.placeholder.com/400x400.png?text=No+Image'}" alt="${order.listingTitle}" class="order-card-thumbnail">
+    <div class="order-card" data-id="${sanitizeHTML(id)}">
+    <img src="${order.listingThumbnail || 'https://via.placeholder.com/400x400.png?text=No+Image'}" alt="${sanitizeHTML(order.listingTitle)}" class="order-card-thumbnail">
         <div class="order-card-info">
-            <h4>${order.listingTitle}</h4>
-            <p>Sold by: ${order.sellerEmail}</p>
-            <p>Price: $${order.purchasePrice}</p>
-            <p>Status: ${order.status}</p>
+            <h4>${sanitizeHTML(order.listingTitle)}</h4>
+            <p>Sold by: ${sanitizeHTML(order.sellerEmail)}</p>
+            <p>Price: $${sanitizeHTML(order.purchasePrice)}</p>
+            <p>Status: ${sanitizeHTML(order.status)}</p>
         </div>
         <div class="order-card-actions">
             ${order.status === 'completed' ? // Only allow review if completed
-            `<button class="leave-review-btn" data-id="${id}">Leave Review</button>`
+            `<button class="leave-review-btn" data-id="${sanitizeHTML(id)}">Leave Review</button>`
             : ''}
         </div>
     </div>
@@ -329,7 +347,7 @@ const orderCardHTML = (order, id) => `
 
 // --- Form for creating a review ---
 const createReviewHTML = (listingTitle) => `
-    <h2>Leave a Review for: ${listingTitle}</h2>
+    <h2>Leave a Review for: ${sanitizeHTML(listingTitle)}</h2>
     <form id="create-review-form">
         <div class="star-rating-input">
             <label>Rating:</label>
@@ -391,10 +409,10 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
         switch (inquiry.status) {
             case 'pending_seller_response':
                 cardContent = `
-                    <p>Buyer ${inquiry.buyerEmail} is interested.</p>
+                    <p>Buyer ${sanitizeHTML(inquiry.buyerEmail)} is interested.</p>
                     <div class="inquiry-actions">
-                        <button class="inquiry-confirm-btn" data-id="${inquiry.id}">Propose Meetup</button>
-                        <button class="inquiry-deny-btn" data-id="${inquiry.id}">Deny</button>
+                        <button class="inquiry-confirm-btn" data-id="${sanitizeHTML(inquiry.id)}">Propose Meetup</button>
+                        <button class="inquiry-deny-btn" data-id="${sanitizeHTML(inquiry.id)}">Deny</button>
                     </div>
                 `;
                 break;
@@ -409,9 +427,9 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                     <p class="success">The buyer has accepted your meetup proposal!</p>
                     ${escortButtonHTML} <div class="meetup-details-container">
                         <div class="meetup-info">
-                            <p><strong>Who:</strong> ${inquiry.buyerEmail}</p>
-                            <p><strong>When:</strong> ${prettyTime}</p>
-                            <p><strong>Where:</strong> ${proposal.location}</p>
+                            <p><strong>Who:</strong> ${sanitizeHTML(inquiry.buyerEmail)}</p>
+                            <p><strong>When:</strong> ${sanitizeHTML(prettyTime)}</p>
+                            <p><strong>Where:</strong> ${sanitizeHTML(proposal.location)}</p>
                         </div>
                     </div>
                     <div class="inquiry-actions">
@@ -420,7 +438,7 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                 `;
                 break;
             default:
-                cardContent = `<p>Status: ${inquiry.status}</p>`;
+                cardContent = `<p>Status: ${sanitizeHTML(inquiry.status)}</p>`;
         }
     } else {
         switch (inquiry.status) {
@@ -430,10 +448,10 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'seller_confirmed':
                 cardContent = `
                     <p class="success">Seller has proposed a meetup!</p>
-                    <p><strong>When:</strong> ${prettyTime}</p>
-                    <p><strong>Where:</strong> ${proposal.location}</p>
+                    <p><strong>When:</strong> ${sanitizeHTML(prettyTime)}</p>
+                    <p><strong>Where:</strong> ${sanitizeHTML(proposal.location)}</p>
                     <div class="inquiry-actions">
-                        <button class="inquiry-accept-btn" data-id="${inquiry.id}">Confirm Meetup</button>
+                        <button class="inquiry-accept-btn" data-id="${sanitizeHTML(inquiry.id)}">Confirm Meetup</button>
                     </div>
                 `;
                 break;
@@ -445,9 +463,9 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                     <p class="success">You Accepted the Meetup!</p>
                     ${escortButtonHTML} <div class="meetup-details-container">
                         <div class="meetup-info">
-                            <p><strong>Who:</strong> ${inquiry.sellerEmail}</p>
-                            <p><strong>When:</strong> ${prettyTime}</p>
-                            <p><strong>Where:</strong> ${proposal.location}</p>
+                            <p><strong>Who:</strong> ${sanitizeHTML(inquiry.sellerEmail)}</p>
+                            <p><strong>When:</strong> ${sanitizeHTML(prettyTime)}</p>
+                            <p><strong>Where:</strong> ${sanitizeHTML(proposal.location)}</p>
                         </div>
                     </div>
                     <div class="inquiry-actions">
@@ -456,13 +474,13 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
                 `;
                 break;
             default:
-                cardContent = `<p>Status: ${inquiry.status}</p>`;
+                cardContent = `<p>Status: ${sanitizeHTML(inquiry.status)}</p>`;
         }
     }
 
     return `
-        <div class="inquiry-card" data-id="${inquiry.id}">
-            <h4>${inquiry.listingTitle}</h4>
+        <div class="inquiry-card" data-id="${sanitizeHTML(inquiry.id)}">
+            <h4>${sanitizeHTML(inquiry.listingTitle)}</h4>
             ${cardContent}
         </div>
     `;
@@ -504,6 +522,7 @@ async function renderInquiriesTab(auth, db, storage, containerElement) {
         // Add event listeners for the new buttons
         listContainer.addEventListener('click', async (e) => {
             const inquiryId = e.target.dataset.id;
+            const sanitizedInquiryId = sanitizeHTML(inquiryId);
             const respondFunc = firebase.functions().httpsCallable('respondToInquiry');
 
             if (e.target.classList.contains('inquiry-deny-btn')) {
@@ -544,12 +563,12 @@ async function renderInquiriesTab(auth, db, storage, containerElement) {
                 card.innerHTML += `
                     <div class="proposal-form">
                         <label for="meetup-time-${inquiryId}">🗓️ Meetup Date & Time</label>
-                        <input type="datetime-local" class="proposal-input" id="meetup-time-${inquiryId}" required>
+                        <input type="datetime-local" class="proposal-input" id="meetup-time-${sanitizedInquiryId}" required>
                         
                         <label for="meetup-location-${inquiryId}">📍 Proposed Location</label>
-                        <textarea class="proposal-input" id="meetup-location-${inquiryId}" placeholder="e.g., GSU Student Center, 1st floor"></textarea>
+                        <textarea class="proposal-input" id="meetup-location-${sanitizedInquiryId}" placeholder="e.g., GSU Student Center, 1st floor"></textarea>
                         
-                        <button class="submit-proposal-btn submit-button" data-id="${inquiryId}">Send Proposal</button>
+                        <button class="submit-proposal-btn submit-button" data-id="${sanitizedInquiryId}">Send Proposal</button>
                     </div>
                 `;
                 e.target.style.display = 'none'; // Hide "Propose Meetup" button
@@ -608,8 +627,8 @@ const reviewCardHTML = (review) => {
         <div class="review-card-rating">
             ${starsHTML}
         </div>
-        <p class="review-card-comment">"${review.comment}"</p>
-        <p class="review-card-buyer">From: ${review.buyerEmail || 'Anonymous'}</p>
+        <p class="review-card-comment">"${sanitizeHTML(review.comment)}"</p>
+        <p class="review-card-buyer">From: ${sanitizeHTML(review.buyerEmail) || 'Anonymous'}</p>
     </div>
     `;
 };
@@ -2103,11 +2122,11 @@ function addListingFormListener(auth, db, storage) {
                     if (filesToUpload.length < 4) {
                         filesToUpload.push(result.file);
                     } else {
-                        errorMessages.push(`Max 4 images. '${result.file.name}' was not added.`);
+                        errorMessages.push(`Max 4 images. '${sanitizeHTML(result.file.name)}' was not added.`);
                         allFilesSafe = false;
                     }
                 } else {
-                    errorMessages.push(`<b>${result.file.name}</b> rejected: ${result.reason}`);
+                    errorMessages.push(`<b>${sanitizeHTML(result.file.name)}</b> rejected: ${sanitizeHTML(result.reason)}`);
                     allFilesSafe = false;
                 }
                 
@@ -2544,7 +2563,7 @@ function setupNotificationListener(auth, db, storage) {
                 if (!notif.isRead) {
                     item.classList.add('is-unread');
                 }
-                item.innerHTML = notif.message;
+                item.innerHTML = sanitizeHTML(notif.message);
                 item.dataset.linkTo = notif.linkTo || 'none';
                 listContent.appendChild(item);
             });
