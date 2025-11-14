@@ -538,6 +538,7 @@ async function renderInquiriesTab(auth, db, storage, containerElement) {
             }
 
             if (e.target.classList.contains('inquiry-confirm-btn')) {
+                e.target.disabled = true;
                 // Replace the card content with the proposal form
                 const card = e.target.closest('.inquiry-card');
                 card.innerHTML += `
