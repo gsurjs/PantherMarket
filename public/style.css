@@ -1717,8 +1717,8 @@ body.dark-mode .drag-handle {
 
     #nav-links a,
     #nav-links button {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.95rem;
         border-radius: 4px;
         background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
