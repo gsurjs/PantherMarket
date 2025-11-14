@@ -13,8 +13,8 @@ const stripe = Stripe('pk_test_51SPblu2OqbuQAGApTQPlL3E3Fd6EPtlRSGDEKLB7XvGvG99w
  */
 
 function sanitizeHTML(str) {
-    if (!str) return '';
-    return str.replace(/[&<>"']/g, function(m) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"']/g, function(m) { 
         return {
             '&': '&amp;',
             '<': '&lt;',
