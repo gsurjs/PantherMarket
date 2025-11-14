@@ -1938,6 +1938,11 @@ body.dark-mode .drag-handle {
 }
 
 @media (max-width: 400px) {
+
+    header {
+        transform: translateZ(0);
+        backface-visibility: hidden;
+    }
     header h1 {
         font-size: 1.5rem;
     }
