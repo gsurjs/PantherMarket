@@ -128,33 +128,6 @@ header h3 {
     align-items: center;
 }
 
-/* --- Fix for Notification Bell on Mobile --- */
-#nav-links #notification-bell-btn {
-    padding: 0; /* Override the general nav button padding */
-    width: 2.5rem;  /* Match the theme toggle button */
-    height: 2.5rem; /* Match the theme toggle button */
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%; /* Ensure it stays round */
-    font-size: 1.2rem;
-}
-
-#notification-bell-btn {
-    background: rgba(255,255,255,0.1);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 50%;
-    color: white;
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 1.2rem;
-    padding: 0;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-}
 
 #notification-bell-btn:hover {
     background: rgba(255,255,255,0.2);
@@ -1744,8 +1717,8 @@ body.dark-mode .drag-handle {
 
     #nav-links a,
     #nav-links button {
-        padding: 0.4rem 0.8rem;
-        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
+        font-size: 0.95rem;
         border-radius: 4px;
         background: rgba(255, 255, 255, 0.1);
         border: 1px solid rgba(255, 255, 255, 0.2);
