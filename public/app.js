@@ -425,16 +425,17 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">The buyer has accepted your meetup proposal!</p>
-                    ${escortButtonHTML} <div class="meetup-details-container">
+                    <div class="inquiry-actions">
+                        <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
+                    </div>
+                    <div class="meetup-details-container">
                         <div class="meetup-info">
                             <p><strong>Who:</strong> ${sanitizeHTML(inquiry.buyerEmail)}</p>
                             <p><strong>When:</strong> ${sanitizeHTML(prettyTime)}</p>
                             <p><strong>Where:</strong> ${sanitizeHTML(proposal.location)}</p>
                         </div>
                     </div>
-                    <div class="inquiry-actions">
-                        <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
-                    </div>
+                    ${escortButtonHTML}
                 `;
                 break;
             default:
@@ -461,16 +462,19 @@ const inquiryCardHTML = (inquiry, currentUserId) => {
             case 'buyer_accepted':
                 cardContent = `
                     <p class="success">You Accepted the Meetup!</p>
-                    ${escortButtonHTML} <div class="meetup-details-container">
+
+                    <div class="inquiry-actions">
+                        <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
+                    </div>
+
+                    <div class="meetup-details-container">
                         <div class="meetup-info">
                             <p><strong>Who:</strong> ${sanitizeHTML(inquiry.sellerEmail)}</p>
                             <p><strong>When:</strong> ${sanitizeHTML(prettyTime)}</p>
                             <p><strong>Where:</strong> ${sanitizeHTML(proposal.location)}</p>
                         </div>
                     </div>
-                    <div class="inquiry-actions">
-                        <a href="${calendarLink}" download="meetup.ics" class="button">Add to Calendar</a>
-                    </div>
+                    ${escortButtonHTML} 
                 `;
                 break;
             default:
