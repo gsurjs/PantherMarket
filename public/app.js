@@ -2440,7 +2440,23 @@ function addAuthFormListeners(auth, db) {
                 await auth.signInWithEmailAndPassword(email, password);
                 // The onAuthStateChanged listener will handle the redirect.
             } catch (error) {
-                authErrorElement.textContent = error.message;
+                onsole.error("Login Error Code:", error.code);
+                switch (error.code) {
+                    case 'auth/invalid-login-credentials':
+                    case 'auth/invalid-credential':
+                    case 'auth/user-not-found':
+                    case 'auth/wrong-password':
+                        authErrorElement.textContent = 'Invalid email or password. Please try again.';
+                        break;
+                    case 'auth/invalid-email':
+                        authErrorElement.textContent = 'Please enter a valid email format.';
+                        break;
+                    case 'auth/too-many-requests':
+                        authErrorElement.textContent = 'Access temporarily disabled due to too many attempts. Please try again later.';
+                        break;
+                    default:
+                        authErrorElement.textContent = 'An unexpected error occurred. Please try again.';
+                }
             }
         });
     }
