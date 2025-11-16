@@ -2440,7 +2440,7 @@ function addAuthFormListeners(auth, db) {
                 await auth.signInWithEmailAndPassword(email, password);
                 // The onAuthStateChanged listener will handle the redirect.
             } catch (error) {
-                onsole.error("Login Error Code:", error.code);
+                console.error("Login Error Code:", error.code);
                 switch (error.code) {
                     case 'auth/invalid-login-credentials':
                     case 'auth/invalid-credential':
