@@ -26,3 +26,6 @@ Thumbs.db
 # Firebase
 firebase-debug*.log
 firestore-debug*.log
+
+# Ignore test case directory and all contents
+test/
